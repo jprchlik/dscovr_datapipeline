@@ -1,13 +1,29 @@
 
 ;--------------------------------------------------
+;Uses 
+;    load_plasma.pro
+;Need to run the following if not running from dsc_advanced_kp_fit_v2.pro
+;     @'/crater/utilities/idl/mike/idlstartup' 
 ;
-; @'/crater/utilities/idl/mike/idlstartup' 
+;
+;USAGE
+;compare_wind_dscovr,year,doy,span=span,filefmt=filefmt,archive=archive
+;
+;COMMENTS
+;    Compares WIND and DSCOVR data for a given day and plot puts plots with 
+;    WIND and DSCOVR overplotted (_ontop_)
+;    and DSCOVR-WIND (_delta_) in ../out_plots/
+;--------------------------------------------------
+;
 
-
-
-
-
-;creates error bars for plots 
+;--------------------------------------------------
+;USAGE
+;    error_bars,xval,yval,err,p_err_x,p_err_y
+;
+;COMMENTS
+;    creates error bars for plots 
+;    Allow the syntax claims only Y errors you can flop x and y to plot x errors
+;--------------------------------------------------
 pro error_bars,xval,yval,err,p_err_x,p_err_y
 
 p_err_x = [xval,xval]
@@ -17,25 +33,29 @@ p_err_y = [abs(err),-abs(err)]+yval
 end
 
 
-;=====================================================
-;Function which spans +/- 10 minutes to find Chi^2 min
-;wdoy  = WIND day of year
-;wd = WIND-density 
-;wx = WIND-Vx      
-;wy = WIND-Vy      
-;wz = WIND-Vz      
-;ddoy  = DSCOVR day of year
-;dd = DSCOVR-density
-;dx = DSCOVR-Vx
-;dy = DSCOVR-Vy
-;dz = DSCOVR-Vz
-;ddd = DSCOVR uncertainty in density
-;ddx = DSCOVR uncertainty in Vx
-;ddy = DSCOVR uncertainty in Vy
-;ddz = DSCOVR uncertainty in Vz
-;span = time in minutes to minimize
-;samp = sampling fequence in minutes
-;=====================================================
+;--------------------------------------------------
+;USAGE
+;dtime = chi_min_time(wdoy,wd,wx,wy,wz,ddoy,dd,dx,dy,dz,ddd,ddx,ddy,ddz,span=span,samp=samp
+;
+;COMMENTS
+;    Function which spans +/- 10 minutes to find Chi^2 min
+;    wdoy  = WIND day of year
+;    wd = WIND-density 
+;    wx = WIND-Vx      
+;    wy = WIND-Vy      
+;    wz = WIND-Vz      
+;    ddoy  = DSCOVR day of year
+;    dd = DSCOVR-density
+;    dx = DSCOVR-Vx
+;    dy = DSCOVR-Vy
+;    dz = DSCOVR-Vz
+;    ddd = DSCOVR uncertainty in density
+;    ddx = DSCOVR uncertainty in Vx
+;    ddy = DSCOVR uncertainty in Vy
+;    ddz = DSCOVR uncertainty in Vz
+;    span = time in minutes to minimize
+;    samp = sampling fequence in minutes
+;--------------------------------------------------
 function chi_min_time,wdoy,wd,wx,wy,wz,ddoy,dd,dx,dy,dz,ddd,ddx,ddy,ddz,span=span,samp=samp
 if keyword_set(span) then span = span else span = 10 ;span to loop +/- in minutes
 if keyword_set(samp) then samp = samp else samp = 0.50 ; sampling fequency in minutes
@@ -84,7 +104,21 @@ print,'Chi^2 time offset',strcompress(dtime*24.*60.),'min'
 return,dtime
 end
 
-; span in days
+;--------------------------------------------------
+;MAIN ROUTINE
+;USAGE
+;compare_wind_dscovr,year,doy,span=span,filefmt=filefmt,archive=archive
+;
+;COMMENTS
+;    Compares WIND and DSCOVR data for a given day and plot puts plots with 
+;    WIND and DSCOVR overplotted (_ontop_)
+;    and DSCOVR-WIND (_delta_) in ../out_plots/
+;    year and day of year (doy) are integers 
+;    span in days to compare WIND and DSCOVR (default = 1)
+;    filefmt is the format of the idl save file you need to restore (default = '("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl"))
+;    archive is the location of the idl save files archive (default = '/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected)
+;
+;--------------------------------------------------
 pro compare_wind_dscovr,year,doy,span=span,filefmt=filefmt,archive=archive
 
 if keyword_set(archive) then archive=archive else archive='/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected';get the default location of DSCOVR archive
