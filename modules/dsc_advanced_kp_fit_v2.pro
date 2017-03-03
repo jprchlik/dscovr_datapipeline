@@ -222,8 +222,10 @@ dT = 2.*T*dw/w
 ; the off-radial velocity components are high uncertainty
 ; we're going to treat them the same for the sake of uncertainty
 ; estimates
+;fix for solar wind's aberration in Y component
+solab = 29.78 ;km/s
 ux = reform(ugse[*, 0])
-uy = reform(ugse[*, 1])
+uy = reform(ugse[*, 1])-solab ; Add (2017/03/03 Prchlik. J)
 uz = reform(ugse[*, 2])
 umag = sqrt(ux^2 + uy^2 + uz^2)
 uperp = sqrt(umag^2 - ux^2)
@@ -742,13 +744,13 @@ pro dsc_advanced_kp_fit, year, doy, show=show, hold=hold, $
 ; (1) INITIALIZATIONS AND LOADS
 ;compile necessary functions (Prchlik J. 2017/02/27)
 ;fist compile the startup program
-pref_set,'IDL_STARTUP','/crater/utilities/idl/mike/idlstartup',/commit
-pref_set,'IDL_PATH','/crater/utilities/idl/mike/:<IDL_DEFAULT>',/commit
+;pref_set,'IDL_STARTUP','/crater/utilities/idl/mike/idlstartup',/commit
+pref_set,'IDL_PATH','+/crater/utilities/idl/mike/:+/usr/local/itt/user_contrib/astron:+/usr/local/itt/user_contrib/coyote:+/usr/local/itt/user_contrib/catalyst:<IDL_DEFAULT>',/commit
+load_plasma
 
 ;Grab needed cdf routines
 setenv,'LD_LIBRARY_PATH=/usr/local/rsi/idl_6.3/bin/bin.linux.x86:/home/cdaweb/lib'
 resolve_routine,'idlmakecdf',/COMPILE_FULL
-idlmakecdf
 
 
 restore, '/crater/observatories/dscovr/code/modules/dsc_Vwindows.idl'
@@ -1277,6 +1279,8 @@ rangechecks, dfc_kp_1min
 ; (14) Save if requested, hault execution if requested
 if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and compare plot under save)
     advkp_save, adv_kp, dfc_kp, dfc_kp_1min, yyyy, ddd
+    ;load newly created save file and apply correction
+    apply_empirical_corrections_1min, fix(yyyy),fix(ddd),fix(ddd)+1
     idl_dscovr_to_cdf,fix(yyyy),fix(ddd) ;create 1minute cdf files based on doy and year
 ;Currently does not load load_plasma
     compare_wind_dscovr,fix(yyyy),fix(ddd) ;create plot comparing 1minute dscovr data to wind observations
