@@ -1,16 +1,28 @@
+;idl_dscovr_to_cdf
+;
+;--------------------------------------------------
+;Uses
+;    IF not ran from dsc_advanced_kp_fit_v2 then the follow contingencies are required
+;    folling 
+;    @'/crater/utilities/idl/mike/idlstartup' 
+;    @compile_cdaweb
+;    @compile_IDLmakecdf
 
 ;--------------------------------------------------
+;ROUTINE for coverting idlsave file to CDF file
+;Coverts idl save files to CDF format
 ;
-; @'/crater/utilities/idl/mike/idlstartup' 
-; @compile_cdaweb
-; @compile_IDLmakecdf
-
+;USAGE
+;idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt, $
+;                  outfmt=outfmt,orchive=orchive
+;--------------------------------------------------
 
 
 ;--------------------------------------------------
 ; SUBROUTINE for coverting fraction of a day (fd) into hour (hh), minute (mm), and second (ss) variables
 ;USAGE
 ;frac_hhmmss,fd,hh,mm,ss
+;--------------------------------------------------
 pro frac_hhmmss,fd,hh,mm,ss
 
 
@@ -32,7 +44,11 @@ if n_elements(size(bad)) gt 3 then val[bad]= cdffil
 return,val
 end
 
+;--------------------------------------------------
 ;Function takes root idl structure and observed epoch and send fill value to bad values
+;USAGE
+;root = remove(remove_bad_times,root,obsepoch)
+;--------------------------------------------------
 function remove_bad_times,root,obsepoch
 
 badfile = '../rejected_times/rejected_times.dat' ; file containing formatted rejected times
@@ -105,14 +121,6 @@ endfor
 return,root
 end
 
-;--------------------------------------------------
-; SUBROUTINE for coverting idlsave file to CDF file
-;idl_dscovr_to_wind
-;Coverts idl save files to CDF format
-;
-;USAGE
-;idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt,outfmt=outfmt,orchive=orchive
-;--------------------------------------------------
 
 pro idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt,outfmt=outfmt,orchive=orchive
 
@@ -247,7 +255,7 @@ if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
 
 ;fix for solar wind's aberration in Y component
 solab = 29.78 ;km/s
-vgse[2,*] = vgse[2,*]-solab
+vgse[2,*] = vgse[2,*];-solab Moved to advanced dsc_advanced_kp_fit_v2
 
 
 ; put values into variables
