@@ -3,7 +3,7 @@
 ;--------------------------------------------------
 ;Uses
 ;    IF not ran from dsc_advanced_kp_fit_v2 then the follow contingencies are required
-;    folling 
+;    following 
 ;    @'/crater/utilities/idl/mike/idlstartup' 
 ;    @compile_cdaweb
 ;    @compile_IDLmakecdf
@@ -13,7 +13,7 @@
 ;Coverts idl save files to CDF format
 ;
 ;USAGE
-;idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt, $
+;idl_dscovr_to_cdf,year,doy,version,archive=archive,skeleton=skeleton,filefmt=filefmt, $
 ;                  outfmt=outfmt,orchive=orchive,outdom=outdom
 ;Added keyword to output cdf in dom format
 ;--------------------------------------------------
@@ -137,7 +137,7 @@ if keyword_set(skeleton) then skeleton=skeleton else skeleton='../skeleton/dscov
 if keyword_set(filefmt) then filefmt=filefmt else filefmt='("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl")' ;default file format is for 1 minute cadence data
 
 ;if keyword_set(outfmt) then outfmt=outfmt else outfmt = '("dscovr_h1_plasmag_v01_",I4,I03,I02,I02,I02,".cdf")';old format when 1 file per observation
-if keyword_set(outfmt) then outfmt=outfmt else outfmt = '("dscovr_h1_fc_",I4,I02,I02,"_v01.cdf")' ;updated version by hand Prchlik J. (2017/03/09)
+if keyword_set(outfmt) then outfmt=outfmt else outfmt = '("dscovr_h1_fc_",I4,I02,I02,"_v",I02,".cdf")' ;updated version by save file Prchlik J. (2017/03/16)
 
 
 file = archive+string([year,doy],format=filefmt);get file name based on doy and year
