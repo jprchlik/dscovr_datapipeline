@@ -40,7 +40,7 @@
 ;                         neg_offset=neg_offset, verbose=verbose
 ;
 ;
-; NOTE THAT EARTH ORBITAL ABBERRATION HASN'T BEEN CORRECTED YET (2/6/2017)
+; ABERATION CORRECTION NOW IN PROGRAM HOWEVER REPROCESSING OF ALL TIME NOT COMPLETE (PRCHLIK, J 2017/03/16); 
 ;
 ;
 ;
@@ -1284,7 +1284,7 @@ if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and co
     advkp_save, adv_kp, dfc_kp, dfc_kp_1min, yyyy, ddd
     ;load newly created save file and apply correction
     apply_empirical_corrections_1min, fix(yyyy),fix(ddd),fix(ddd)+1
-    idl_dscovr_to_cdf,fix(yyyy),fix(ddd) ;create 1minute cdf files based on doy and year
+;    idl_dscovr_to_cdf,fix(yyyy),fix(ddd) ;create 1minute cdf files based on doy and year
 ;Currently does not load load_plasma
     compare_wind_dscovr,fix(yyyy),fix(ddd) ;create plot comparing 1minute dscovr data to wind observations
 endif
