@@ -157,7 +157,7 @@ ddx= root.VX.uncertainty
 
 
 ;VY
-dy = root.VY.data-29.78 ;fix for solar wind aberration 
+dy = root.VY.data;-29.78 ;fix for solar wind aberration NOW INSIDE dsc_advanced_kp_fit_v2.pro
 ddy= root.VY.uncertainty
 
 
