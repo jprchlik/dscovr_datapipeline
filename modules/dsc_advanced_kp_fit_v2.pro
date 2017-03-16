@@ -796,6 +796,9 @@ above_peak = index_array gt ((peaklocs mod 64) ## (1.+fltarr(64)))
 ; the high-energy side of the peak (i.e. avoid flyback)
 ;
 ; In the final version of the advkp, this may be made a default
+; Make rezero the default state (Prchlik J. 2017/03/03)
+if keyword_set(rezero) then rezero = rezero else rezero = 1
+
 if n_elements(rezero) gt 0 then begin
   if rezero eq 1 then begin 
     if not keyword_set(neg_offset) then neg_offset = 0
