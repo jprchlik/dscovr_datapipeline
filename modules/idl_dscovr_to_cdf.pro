@@ -14,7 +14,8 @@
 ;
 ;USAGE
 ;idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt, $
-;                  outfmt=outfmt,orchive=orchive
+;                  outfmt=outfmt,orchive=orchive,outdom=outdom
+;Added keyword to output cdf in dom format
 ;--------------------------------------------------
 
 
@@ -122,7 +123,7 @@ return,root
 end
 
 
-pro idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt,outfmt=outfmt,orchive=orchive
+pro idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt,outfmt=outfmt,orchive=orchive,outdom=outdom
 
 
 if keyword_set(archive) then archive=archive else archive='/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected';get the default location of DSCOVR archive
@@ -136,7 +137,7 @@ if keyword_set(skeleton) then skeleton=skeleton else skeleton='../skeleton/dscov
 if keyword_set(filefmt) then filefmt=filefmt else filefmt='("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl")' ;default file format is for 1 minute cadence data
 
 ;if keyword_set(outfmt) then outfmt=outfmt else outfmt = '("dscovr_h1_plasmag_v01_",I4,I03,I02,I02,I02,".cdf")';old format when 1 file per observation
-if keyword_set(outfmt) then outfmt=outfmt else outfmt = '("dscovr_h1_fc_",I4,I03,"_v01.cdf")'
+if keyword_set(outfmt) then outfmt=outfmt else outfmt = '("dscovr_h1_fc_",I4,I02,I02,"_v01.cdf")' ;updated version by hand Prchlik J. (2017/03/09)
 
 
 file = archive+string([year,doy],format=filefmt);get file name based on doy and year
@@ -156,14 +157,11 @@ dayfrac = oroot.time.data-doy ;covert day time data into fractions of day
 fd = dayfrac
 frac_hhmmss,fd,hh,mm,ss ;get HH,MM,SS from fraction of day
 ; out_cdf = string([year,doy,hh,mm,round(ss)],format=outfmt) ;create filename from day fraction
-out_cdf = string([year,doy],format=outfmt) ;create filename from day fraction file per day format    
 
 adoy = doy+intarr(n_elements(fd))
 ayear = year+intarr(n_elements(fd))
 
 
-;read cdf skeleton
-buf1 = read_master_cdf(skeleton,orchive+out_cdf) ;create cdf file from master skeleton
 
 
 cdf_tt2000,obsepoch,ayear,intarr(n_elements(fd)),adoy,hh,mm,round(ss),/compute_epoch ;compute cdf epoch time
@@ -177,6 +175,17 @@ dayms = round(fd*24.*3600.*1000.);day*(hour/day)*(s/hour)*(ms/s)
 ;fill value if times are determined to be bad
 root = remove_bad_times(oroot,obsepoch) ; program to find and remove bad times
 
+;OUTPUT format in YYYYMMDD format
+cdf_tt2000,obsepoch,oyear,omon,odom,ohh,omm,oss,/break;create month and dom variables
+epochfmt = '(I4,"-",I02,"-",I02,"T",I02,":",I02,":",I02)'
+mepoch  = string([year,omon,odom,ohh,omm,oss],format=epochfmt)
+
+
+
+;Create file format
+out_cdf = string([year,fix(omon[0]),fix(odom[0])],format=outfmt) ;create filename from day fraction file per day format    
+;read cdf skeleton
+buf1 = read_master_cdf(skeleton,orchive+out_cdf) ;create cdf file from master skeleton
 
 ;time in PB5 format
 pb5t = transpose([[year+intarr(n_elements(dayms))],[doy+intarr(n_elements(dayms))],[dayms]])
@@ -206,7 +215,7 @@ dqf_val = intarr(n_elements(temp)) ;good by default
 
 ;set up variables
 num_rec = n_elements(obsepoch)
-epoch = double(num_rec)
+if keyword_set(outdom) then epoch = strarr(num_rec) else epoch = double(num_rec) ; Prchlik J. add keyword to output Epoch in dom format
 epoch_old = double(num_rec)
 time_pb5 = L64INDGEN(3,num_rec)
 dqf = uint(num_rec)
@@ -255,12 +264,12 @@ if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
 
 ;fix for solar wind's aberration in Y component
 solab = 29.78 ;km/s
-vgse[2,*] = vgse[2,*];-solab Moved to advanced dsc_advanced_kp_fit_v2
+vgse[2,*] = vgse[2,*]-solab; Moved to advanced dsc_advanced_kp_fit_v2
 
 
 ; put values into variables
 epoch_old = obsepoch
-epoch = obsepoch
+if keyword_set(outdom) then epoch=mepoch else epoch = obsepoch ; Prchlik J. 2017/03/09 out put in YYYY/MM/DD format
 time_pb5(0,*) = pb5t[0,*]
 time_pb5(1,*) = pb5t[1,*]
 time_pb5(2,*) = pb5t[2,*]
