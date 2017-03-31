@@ -123,7 +123,7 @@ return,root
 end
 
 
-pro idl_dscovr_to_cdf,year,doy,archive=archive,skeleton=skeleton,filefmt=filefmt,outfmt=outfmt,orchive=orchive,outdom=outdom
+pro idl_dscovr_to_cdf,year,doy,version,archive=archive,skeleton=skeleton,filefmt=filefmt,outfmt=outfmt,orchive=orchive,outdom=outdom
 
 
 if keyword_set(archive) then archive=archive else archive='/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected';get the default location of DSCOVR archive
@@ -156,7 +156,7 @@ dayfrac = oroot.time.data-doy ;covert day time data into fractions of day
 ;for i=0, 2 do begin;n_elements(dayfrac)-1 do begin
 fd = dayfrac
 frac_hhmmss,fd,hh,mm,ss ;get HH,MM,SS from fraction of day
-; out_cdf = string([year,doy,hh,mm,round(ss)],format=outfmt) ;create filename from day fraction
+; out_cdf = string([year,doy,hh,mm,round(ss),version],format=outfmt) ;create filename from day fraction
 
 adoy = doy+intarr(n_elements(fd))
 ayear = year+intarr(n_elements(fd))
@@ -183,7 +183,7 @@ mepoch  = string([year,omon,odom,ohh,omm,oss],format=epochfmt)
 
 
 ;Create file format
-out_cdf = string([year,fix(omon[0]),fix(odom[0])],format=outfmt) ;create filename from day fraction file per day format    
+out_cdf = string([year,fix(omon[0]),fix(odom[0]),version],format=outfmt) ;create filename from day fraction file per day format    
 ;read cdf skeleton
 buf1 = read_master_cdf(skeleton,orchive+out_cdf) ;create cdf file from master skeleton
 
@@ -264,7 +264,7 @@ if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
 
 ;fix for solar wind's aberration in Y component
 solab = 29.78 ;km/s
-vgse[2,*] = vgse[2,*]-solab; Moved to advanced dsc_advanced_kp_fit_v2
+vgse[1,*] = vgse[1,*]-solab; Moved to advanced dsc_advanced_kp_fit_v2
 
 
 ; put values into variables
