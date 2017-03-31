@@ -107,7 +107,7 @@ end
 ;--------------------------------------------------
 ;MAIN ROUTINE
 ;USAGE
-;compare_wind_dscovr,year,doy,span=span,filefmt=filefmt,archive=archive
+;compare_wind_dscovr,year,doy,version,span=span,filefmt=filefmt,archive=archive
 ;
 ;COMMENTS
 ;    Compares WIND and DSCOVR data for a given day and plot puts plots with 
@@ -119,16 +119,22 @@ end
 ;    archive is the location of the idl save files archive (default = '/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected)
 ;
 ;--------------------------------------------------
-pro compare_wind_dscovr,year,doy,span=span,filefmt=filefmt,archive=archive
+pro compare_wind_dscovr,year,doy,version,span=span,filefmt=filefmt,archive=archive
 
-if keyword_set(archive) then archive=archive else archive='/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected';get the default location of DSCOVR archive
+if keyword_set(archive) then archive=archive else archive='/crater/observatories/dscovr/plasmag/l2/cdf/public_kp/1minute_corrected';get the default location of DSCOVR archive
 archive= archive+'/'
-if keyword_set(filefmt) then filefmt=filefmt else filefmt= '("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl")';default file format is for 1 minute cadence data
+if keyword_set(filefmt) then filefmt=filefmt else filefmt= '("dscovr_h1_fc_",I4,I02,I02,"_v",I02)';default file format is for 1 minute cadence data
 if keyword_set(span) then span=fix(span) else span = 1
 
 plotsym,0,/fill
 
-file = archive+string([year,doy],format=filefmt);get file name based on doy and year
+;Convert DOY to YYYYMMDD format
+byear = JULDAY(01,01,year) ;First day of year
+bdoyj = byear+doy
+CALDAT,bdoyj,mon,dom,yyyy
+
+;file = archive+string([year,doy],format=filefmt);get file name based on doy and year
+file = archive+string([yyyy,mon,dom,version],format=filefmt)
 
 ;WIND data
 load_plasma,year,doy,doy+span,/wind,vx=wx,vy=wy,vz=wz,t=wt,den=wd,doy=wdoy,ns=wew
@@ -146,32 +152,35 @@ kb  = double(1.3906488e-23);boltzmann's constant
 wew = wt
 aew = at
 
-restore,file ;restore idl save file
-root = DFC_KP_1MIN
+;restore,file ;restore idl save file
+root = read_mycdf("",file,/all)
+;root = DFC_KP_1MIN
 
-ddoy = root.time.data ; Day values
+;ddoy = root.time.data ; Day values
+epoch = root.epoch.dat
+cdf_epoch,epoch,yr,mo,dy,hr,mn,sc,milli,/break
 
 ;VX
-dx = root.VX.data
-ddx= root.VX.uncertainty
+dx = root.v_gse.dat[0,*]
+ddx= root.v_gse_delta.dat[0,*]
 
 
 ;VY
-dy = root.VY.data;-29.78 ;fix for solar wind aberration NOW INSIDE dsc_advanced_kp_fit_v2.pro
-ddy= root.VY.uncertainty
+dy = root.v_gse.dat[1,*]
+ddy= root.v_gse_delta.dat[1,*]
 
 
 ;VZ
-dz = root.VZ.data
-ddz= root.VZ.uncertainty
+dx = root.v_gse.dat[2,*]
+ddx= root.v_gse_delta.dat[2,*]
 
 ;Proton density
-dd = root.N.data
-ddd= root.N.uncertainty
+dd = root.NP.dat
+ddd= root.NP_DELTA.dat
 
 ;Proton thermal speed 
-dew = root.W.data
-ddew= root.W.uncertainty
+dew = root.THERMAL_TEMP.dat
+ddew= root.THERMAL_TEMP_DELTA.dat
 
 
 
@@ -200,7 +209,8 @@ acol = 100 ; ACE color
 
 
 ;covert doy to JULDATES
-jddoy = double(julday(1,1,year,0,0,0)+(ddoy-1)) ; DSCOVR
+;jddoy = double(julday(1,1,year,0,0,0)+(ddoy-1)) ; DSCOVR
+jddoy = double(julday(mo,dy,yr,hr,mn,sc))
 jwdoy = double(julday(1,1,year,0,0,0)+(wdoy-1)) ; WIND  
 
 ;setup format for plots
