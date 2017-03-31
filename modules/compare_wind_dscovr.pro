@@ -130,7 +130,7 @@ plotsym,0,/fill
 
 ;Convert DOY to YYYYMMDD format
 byear = JULDAY(01,01,year) ;First day of year
-bdoyj = byear+doy
+bdoyj = byear+doy-1
 CALDAT,bdoyj,mon,dom,yyyy
 
 ;file = archive+string([year,doy],format=filefmt);get file name based on doy and year
@@ -158,7 +158,7 @@ root = read_mycdf("",file,/all)
 
 ;ddoy = root.time.data ; Day values
 epoch = root.epoch.dat
-cdf_epoch,epoch,yr,mo,dy,hr,mn,sc,milli,/break
+cdf_epoch,epoch,yr,mo,dm,hr,mn,sc,milli,/break
 
 ;VX
 dx = root.v_gse.dat[0,*]
@@ -171,16 +171,16 @@ ddy= root.v_gse_delta.dat[1,*]
 
 
 ;VZ
-dx = root.v_gse.dat[2,*]
-ddx= root.v_gse_delta.dat[2,*]
+dz = root.v_gse.dat[2,*]
+ddz= root.v_gse_delta.dat[2,*]
 
 ;Proton density
 dd = root.NP.dat
 ddd= root.NP_DELTA.dat
 
 ;Proton thermal speed 
-dew = root.THERMAL_TEMP.dat
-ddew= root.THERMAL_TEMP_DELTA.dat
+dew = sqrt(3.*kb/mp*root.THERMAL_TEMP.dat)
+ddew= sqrt(3.*kb/mp*root.THERMAL_TEMP_DELTA.dat)
 
 
 
@@ -210,7 +210,8 @@ acol = 100 ; ACE color
 
 ;covert doy to JULDATES
 ;jddoy = double(julday(1,1,year,0,0,0)+(ddoy-1)) ; DSCOVR
-jddoy = double(julday(mo,dy,yr,hr,mn,sc))
+jddoy = double(julday(mo,dm,yr,hr,mn,sc))
+ddoy = jddoy-julday(1,1,year,0,0,0)+1.; covert to doy
 jwdoy = double(julday(1,1,year,0,0,0)+(wdoy-1)) ; WIND  
 
 ;setup format for plots
