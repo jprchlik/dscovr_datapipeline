@@ -179,8 +179,8 @@ dd = root.NP.dat
 ddd= root.NP_DELTA.dat
 
 ;Proton thermal speed 
-dew = sqrt(3.*kb/mp*root.THERMAL_TEMP.dat)
-ddew= sqrt(3.*kb/mp*root.THERMAL_TEMP_DELTA.dat)
+dew = 1.E-3*sqrt(2.*kb/mp*root.THERMAL_TEMP.dat)
+ddew= 1.E-3*sqrt(2.*kb/mp*root.THERMAL_TEMP_DELTA.dat)
 
 
 
