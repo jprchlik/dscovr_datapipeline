@@ -225,7 +225,7 @@ dT = 2.*T*dw/w
 ;fix for solar wind's aberration in Y component
 solab = 29.78 ;km/s
 ux = reform(ugse[*, 0])
-uy = reform(ugse[*, 1])-solab ; Add (2017/03/03 Prchlik. J)
+uy = reform(ugse[*, 1]);-solab ; Add (2017/03/03 Prchlik. J)
 uz = reform(ugse[*, 2])
 umag = sqrt(ux^2 + uy^2 + uz^2)
 uperp = sqrt(umag^2 - ux^2)
@@ -441,7 +441,7 @@ end
 
 ; ---------------------------------------------------------------------
 ;
-; SUBROUTINE for obtaining the effective array of the FC
+; SUBROUTINE for obtaining the effective area of the FC
 ;
 ; ---------------------------------------------------------------------
 ; DSCOVR FARADAY CUP SIMULATION ALGORITHMS
@@ -739,7 +739,11 @@ pro dsc_advanced_kp_fit, year, doy, show=show, hold=hold, $
                          save=save, rezero=rezero, $
                          averaging_length = averaging_length, $
                          flybacks=flybacks, $
-                         neg_offset=neg_offset, verbose=verbose
+                         neg_offset=neg_offset, verbose=verbose, $
+                         moment_threshold = moment_threshold
+
+mp = 1.67262178d-27             ; SI units
+kb = 1.3806488d-23              ;  SI units
                        
 ; (1) INITIALIZATIONS AND LOADS
 ;compile necessary functions (Prchlik J. 2017/02/27)
@@ -764,7 +768,7 @@ jd = doy + julday(1, 1, year, 0, 0) - 1
 ddd = string(doy, format = '(I03)')
 yyyy = string(year, format = '(I4)')
 
-
+if n_elements(moment_threshold) eq 0 then moment_threshold = 0.1
 
 ; (2) IDENTIFICATION OF CURRENT PEAKS
 nspec = n_elements(spec_jd)
@@ -1035,14 +1039,26 @@ while i lt nspec do begin
     w = 1./(dy^2) ; weight data points by 1/uncertainty^2 (std gaussian weight)
 
     ; (11.2) calculate moments
-    momregions = label_region(y gt 0.1*ymax); select valid data region around peak
-    momsel = where(y gt 0.1*ymax and momregions eq momregions[x0])
-    if n_elements(momsel le 1) then momsel = indgen(n_elements(x))
+    momregions = label_region(y gt moment_threshold*ymax); select valid data region around peak
+    momsel = where(y gt moment_threshold*ymax and momregions eq momregions[x0])
+    if n_elements(momsel) le 1 then momsel = indgen(n_elements(x))
     mom0 = total((y*dx)[momsel])  
     mom1 = total((y*x*dx)[momsel])/mom0  
     mom2 = total((y*(x-mom1)*(x-mom1)*dx)[momsel])/mom0  
     mom3 = total((y*(x-mom1)*(x-mom1)*(x-mom1)*dx/mom0)[momsel])/mom0  
-    moments_1min[*, i] = [mom0, mom1, sqrt(abs(mom2)), (mom3/abs(mom3))*(abs(mom3))^(1./3.)]  
+;    moments_1min[*, i] = [mom0, mom1, sqrt(abs(mom2)), (mom3/abs(mom3))*(abs(mom3))^(1./3.)]  
+    ; emulate the NOAA algorithm moment correction, which 
+    ; uses a maxwellian assumption to account for the truncated
+    ; part of the distribution
+    F_ratio = min(y[momsel])/max(y[momsel])
+    qfac = sqrt(-alog(F_ratio))
+    D0P = 1./erf(qfac)
+    D1P = 1.
+    D2P = 1./(erf(qfac) - 2*qfac*exp(-qfac^2)/sqrt(!dpi))
+    nmom = d0p*mom0
+    vmom = d1p*mom1
+    tmom = d2p*1d6*(mp/kb)*mom2
+    moments_1min[*,i] = [nmom, vmom, tmom, mom3]
 
     ; (11.3) calculate SIMPLE one gaussian fit
     if (x0 le 2) or (x0 ge 60) then x0 = hold_x0   
@@ -1128,14 +1144,27 @@ while i lt nspec do begin
     w = 1./(dy^2) ; weight data points by 1/uncertainty^2 (std gaussian weight)
 
     ; (11.7) calculate moments
-    momregions = label_region(y gt 0.1*ymax); select valid data region around peak
-    momsel = where(y gt 0.1*ymax and momregions eq momregions[x0])
-    if n_elements(momsel le 1) then momsel = indgen(n_elements(x))
+    momregions = label_region(y gt moment_threshold*ymax); select valid data region around peak
+    momsel = where(y gt moment_threshold*ymax and momregions eq momregions[x0])
+    ;if n_elements(momsel) le 1 then momsel = indgen(n_elements(x))
+    if n_elements(momsel) lt 5 then momsel = [x0-2, x0-1, x0, x0+1, x0+2] ; mls 4/6 noaa pipeline selection (1)
+    ok = where(momsel lt 63) ; MLS 4/6 noaa pipeline selection (2)
+    momsel = momsel[ok]      ; MLS 4/6 noaa pipeline selection (3)
+
+
     mom0 = total((y*dx)[momsel])  
     mom1 = total((y*x*dx)[momsel])/mom0  
     mom2 = total((y*(x-mom1)*(x-mom1)*dx)[momsel])/mom0  
     mom3 = total((y*(x-mom1)*(x-mom1)*(x-mom1)*dx/mom0)[momsel])/mom0  
-    moments[*, i] = [mom0, mom1, sqrt(abs(mom2)), (mom3/abs(mom3))*(abs(mom3))^(1./3.)]  
+    F_ratio = min(y[momsel])/max(y[momsel])
+    qfac = sqrt(-alog(F_ratio))
+    D0P = 1./erf(qfac)
+    D1P = 1.
+    D2P = 1./(erf(qfac) - 2*qfac*exp(-qfac^2)/sqrt(!dpi))
+    nmom = d0p*mom0
+    vmom = d1p*mom1
+    tmom = d2p*1d6*(mp/kb)*mom2
+    moments[*,i] = [nmom, vmom, tmom, mom3]
 
     ; (11.8) calculate SIMPLE one gaussian fit
     if (x0 le 2) or (x0 ge 60) then x0 = hold_x0   
@@ -1284,9 +1313,9 @@ if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and co
     advkp_save, adv_kp, dfc_kp, dfc_kp_1min, yyyy, ddd
     ;load newly created save file and apply correction
     apply_empirical_corrections_1min, fix(yyyy),fix(ddd),fix(ddd)+1
-;    idl_dscovr_to_cdf,fix(yyyy),fix(ddd) ;create 1minute cdf files based on doy and year
+;    idl_dscovr_to_cdf,fix(yyyy),fix(ddd),3 ;create 1minute cdf files based on doy and year
 ;Currently does not load load_plasma
-    compare_wind_dscovr,fix(yyyy),fix(ddd) ;create plot comparing 1minute dscovr data to wind observations
+    compare_wind_dscovr,fix(yyyy),fix(ddd),3 ;create plot comparing 1minute dscovr data to wind observations
 endif
 
 if keyword_set(hold) then stop
