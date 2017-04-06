@@ -165,7 +165,9 @@ if keyword_set(filefmt) then filefmt=filefmt else filefmt='("dsc_fc_advkp_1minut
 if keyword_set(outfmt) then outfmt=outfmt else outfmt = '("dscovr_h1_fc_",I4,I02,I02,"_v",I02,".cdf")' ;updated version by save file Prchlik J. (2017/03/16)
 
 
-file = archive+string([year,doy],format=filefmt);get file name based on doy and year
+;base file name
+bfil =string([year,doy],format=filefmt);get file name based on doy and year
+file = archive+bfil
 
 
 
@@ -348,16 +350,30 @@ savefmt = '("dscovr_file_status_v",I02,".idl")'
 savefil = string([version],format=savefmt)
 version_save = file_test(savefil)
 
+;CDF FILE INFO
+cdf_info = FILE_INFO(orchive+red_cdf)
+
+;IDL save file info
+idl_info = FILE_INFO(archive+bfil)
+
+;get Calendar dates
+CALDAT,double(SYSTIME(0,idl_info.CTIME)),imm,idd,iyy,ihh,imn,iss
+CALDAT,double(SYSTIME(0,cdf_info.CTIME)),cmm,cdd,cyy,chh,cmn,css
+
+;covert string to acceptable format
+date_fmt = '(I4,"/",I02,"/",I02," ",I02,":",I02,":",I02)'
+idl_date_str = string([imm,idd,iyy,ihh,imn,iss],format=date_fmt)
+cdf_date_str = string([cmm,cdd,cyy,chh,cmn,css],format=date_fmt)
 
 tmp_s= {file_data, $
-       idl_dir:'',$
-       cdf_dir:'',$
-       idl_file:'',$
-       cdf_file:'',$
-       idl_creation_date:'',$
-       cdf_creation_date:'',$
-       idl_creation_date_jd:double(0.0),$
-       cdf_creation_date_jd:double(0.0),$
+       idl_dir:archive,$
+       cdf_dir:orchive,$
+       idl_file:bfil,$
+       cdf_file:out_cdf,$
+       idl_creation_date:idl_date_str,$
+       cdf_creation_date:cdf_date_str,$
+       idl_creation_date_jd:SYSTIME(idl_info.CTIME,/JULIAN),$
+       cdf_creation_date_jd:SYSTIME(cdf_info.CTIME,/JULIAN),$
       }
 
 
