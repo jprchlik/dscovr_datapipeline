@@ -759,7 +759,12 @@ resolve_routine,'idlmakecdf',/COMPILE_FULL
 
 restore, '/crater/observatories/dscovr/code/modules/dsc_Vwindows.idl'
 loadct, 39
+
+;Allows for xwindow plotting
 device, decomposed = 0
+device, RETAIN=2
+DLM_LOAD,'PNG' ;Added so PNG file creation cannot error
+
 get_spectra, year, doy, ia, ib, ic, spec_jd, verbose=verbose ; get the current spectrum arrays
 ; these arrays ia, ib, and ic, are 64 x n where n is the number of
 ; time points in the day
@@ -1313,7 +1318,7 @@ if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and co
     advkp_save, adv_kp, dfc_kp, dfc_kp_1min, yyyy, ddd
     ;load newly created save file and apply correction
     apply_empirical_corrections_1min, fix(yyyy),fix(ddd),fix(ddd)+1
-;    idl_dscovr_to_cdf,fix(yyyy),fix(ddd),3 ;create 1minute cdf files based on doy and year
+    idl_dscovr_to_cdf,fix(yyyy),fix(ddd),3 ;create 1minute cdf files based on doy and year
 ;Currently does not load load_plasma
     compare_wind_dscovr,fix(yyyy),fix(ddd),3 ;create plot comparing 1minute dscovr data to wind observations
 endif
