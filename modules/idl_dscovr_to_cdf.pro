@@ -19,6 +19,31 @@
 ;--------------------------------------------------
 
 
+
+;--------------------------------------------------
+;
+;This SUBROUTINE defines a idl strcture template to keep track of idl versioning
+;
+;USAGE
+;file_version_temp
+;
+;--------------------------------------------------
+pro file_version_temp
+
+tmp = {file_data, $
+       idl_dir:'',$
+       cdf_dir:'',$
+       idl_file:'',$
+       cdf_file:'',$
+       idl_creation_date:'',$
+       cdf_creation_date:'',$
+       idl_creation_date_jd:double(0.0),$
+       cdf_creation_date_jd:double(0.0),$
+      }
+
+
+end
+
 ;--------------------------------------------------
 ; SUBROUTINE for coverting fraction of a day (fd) into hour (hh), minute (mm), and second (ss) variables
 ;USAGE
@@ -263,8 +288,8 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
 if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
 
 ;fix for solar wind's aberration in Y component
-solab = 29.78 ;km/s
-vgse[1,*] = vgse[1,*]-solab; Moved to advanced dsc_advanced_kp_fit_v2
+;solab = 29.78 ;km/s
+vgse[1,*] = vgse[1,*];-solab; Moved to advanced dsc_advanced_kp_fit_v2
 
 
 ; put values into variables
@@ -289,18 +314,6 @@ thermal_temp_delta = utemp
 
 
 
-;loop at all variables
-;    print,epoch
-;    print,time_pb5
-;    print,dqf
-;    print,v_gse
-;    print,v_gse_delta
-;    print,thermal_spd
-;    print,thermal_spd_delta
-;    print,np
-;    print,np_delta
-;    print,thermal_temp
-;    print,thermal_temp_delta
 
 ;set all data buffers
 *buf1.Epoch.data             = epoch                ;epoch data
@@ -328,8 +341,35 @@ red_cdf = strmid(out_cdf,0,strlen(out_cdf)-4)
 test = read_mycdf("Np,Np_DELTA",orchive+red_cdf,/all,/NODATASTRUCT) ; test to see if cdf write worked
 
 print,orchive+red_cdf
-;    help,/struc,test
-;endfor 
+
+
+;Add versioning information to idlsave file
+savefmt = '("dscovr_file_status_v",I02,".idl")'
+savefil = string([version],format=savefmt)
+version_save = file_test(savefil)
+
+
+tmp_s= {file_data, $
+       idl_dir:'',$
+       cdf_dir:'',$
+       idl_file:'',$
+       cdf_file:'',$
+       idl_creation_date:'',$
+       cdf_creation_date:'',$
+       idl_creation_date_jd:double(0.0),$
+       cdf_creation_date_jd:double(0.0),$
+      }
+
+
+;if version file already exists concat structure else create new
+if version_save eq 1 then begin
+    restore,version_save,/RELAXED_STRUCTURE_ASSIGNMENT 
+    v_struct = [v_strucut,tmp_s]
+    
+endif
+else v_struct = tmp_sb
+
+          
 
 
 
