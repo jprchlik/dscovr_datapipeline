@@ -1321,6 +1321,11 @@ if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and co
     idl_dscovr_to_cdf,fix(yyyy),fix(ddd),3 ;create 1minute cdf files based on doy and year
 ;Currently does not load load_plasma
     compare_wind_dscovr,fix(yyyy),fix(ddd),3 ;create plot comparing 1minute dscovr data to wind observations
+;setup idl structures
+
+
+
+
 endif
 
 if keyword_set(hold) then stop
@@ -1716,6 +1721,7 @@ device, /close
 set_plot, 'x'
 
 end
+
    
 ; --------------------------- BEGIN SANDBOX ------------------------------
 
