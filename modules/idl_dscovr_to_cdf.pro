@@ -38,7 +38,7 @@ tmp = {file_data, $
        idl_creation_date:'',$
        cdf_creation_date:'',$
        idl_creation_date_jd:double(0.0),$
-       cdf_creation_date_jd:double(0.0),$
+       cdf_creation_date_jd:double(0.0)$
       }
 
 
@@ -350,20 +350,16 @@ savefmt = '("dscovr_file_status_v",I02,".idl")'
 savefil = string([version],format=savefmt)
 version_save = file_test(savefil)
 
-;CDF FILE INFO
-cdf_info = FILE_INFO(orchive+red_cdf)
 
-;IDL save file info
-idl_info = FILE_INFO(archive+bfil)
+;Get string of date and time of creation for idl and cdf files
+SPAWN,"date -r "+archive+bfil+' +"%Y/%m/%d %H:%M:%S"',idl_date_str 
+SPAWN,"date -r "+orchive+out_cdf+' +"%Y/%m/%d %H:%M:%S"',cdf_date_str 
 
-;get Calendar dates
-CALDAT,double(SYSTIME(0,idl_info.CTIME)),imm,idd,iyy,ihh,imn,iss
-CALDAT,double(SYSTIME(0,cdf_info.CTIME)),cmm,cdd,cyy,chh,cmn,css
+;Get julian day for each string time
+idl_date_jul = double(JULDAY(fix(strmid(idl_date_str,5,2)),fix(strmid(idl_date_str,8,2)),fix(strmid(idl_date_str,0,4)),fix(strmid(idl_date_str,11,2)),fix(strmid(idl_date_str,14,2)),fix(strmid(idl_date_str,17,2))))
+cdf_date_jul = double(JULDAY(fix(strmid(cdf_date_str,5,2)),fix(strmid(cdf_date_str,8,2)),fix(strmid(cdf_date_str,0,4)),fix(strmid(cdf_date_str,11,2)),fix(strmid(cdf_date_str,14,2)),fix(strmid(cdf_date_str,17,2))))
 
-;covert string to acceptable format
-date_fmt = '(I4,"/",I02,"/",I02," ",I02,":",I02,":",I02)'
-idl_date_str = string([imm,idd,iyy,ihh,imn,iss],format=date_fmt)
-cdf_date_str = string([cmm,cdd,cyy,chh,cmn,css],format=date_fmt)
+
 
 tmp_s= {file_data, $
        idl_dir:archive,$
@@ -372,22 +368,22 @@ tmp_s= {file_data, $
        cdf_file:out_cdf,$
        idl_creation_date:idl_date_str,$
        cdf_creation_date:cdf_date_str,$
-       idl_creation_date_jd:SYSTIME(idl_info.CTIME,/JULIAN),$
-       cdf_creation_date_jd:SYSTIME(cdf_info.CTIME,/JULIAN),$
+       idl_creation_date_jd:idl_date_jul,$
+       cdf_creation_date_jd:idl_date_jul $
       }
 
 
 ;if version file already exists concat structure else create new
 if version_save eq 1 then begin
-    restore,version_save,/RELAXED_STRUCTURE_ASSIGNMENT 
+    restore,savefil,/RELAXED_STRUCTURE_ASSIGNMENT 
     v_struct = [v_strucut,tmp_s]
     
-endif
-else v_struct = tmp_sb
+endif else v_struct = tmp_s
+
+;save the updated savefile
+;save,v_struct,filename=savefile
 
           
-
-
 
 end 
 
