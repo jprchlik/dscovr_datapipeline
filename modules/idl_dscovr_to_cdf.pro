@@ -376,12 +376,12 @@ tmp_s= {file_data, $
 ;if version file already exists concat structure else create new
 if version_save eq 1 then begin
     restore,savefil,/RELAXED_STRUCTURE_ASSIGNMENT 
-    v_struct = [v_strucut,tmp_s]
+    v_struct = [v_struct,tmp_s]
     
 endif else v_struct = tmp_s
 
 ;save the updated savefile
-;save,v_struct,filename=savefile
+save,v_struct,filename=savefil
 
           
 
