@@ -33,11 +33,12 @@
 ;
 ;
 ; USAGE
-; dsc_advanced_kp_fit, year, doy, show=show, hold=hold, $
+; dsc_advanced_kp_fit, year, doy, version, show=show, hold=hold, $
 ;                         save=save, rezero=rezero, $
 ;                         averaging_length = averaging_length, $
 ;                         flybacks=flybacks, $
-;                         neg_offset=neg_offset, verbose=verbose
+;                         neg_offset=neg_offset, verbose=verbose, $
+;                         clobber = clobber
 ;
 ;
 ; ABERATION CORRECTION NOW IN PROGRAM HOWEVER REPROCESSING OF ALL TIME NOT COMPLETE (PRCHLIK, J 2017/03/16); 
@@ -225,7 +226,7 @@ dT = 2.*T*dw/w
 ;fix for solar wind's aberration in Y component
 solab = 29.78 ;km/s
 ux = reform(ugse[*, 0])
-uy = reform(ugse[*, 1]);-solab ; Add (2017/03/03 Prchlik. J)
+uy = reform(ugse[*, 1])-solab ; Add (2017/04/07 Prchlik. J)
 uz = reform(ugse[*, 2])
 umag = sqrt(ux^2 + uy^2 + uz^2)
 uperp = sqrt(umag^2 - ux^2)
@@ -735,12 +736,13 @@ end
 ; ---------------------------------------------------------------------
 
 
-pro dsc_advanced_kp_fit, year, doy, show=show, hold=hold, $
+pro dsc_advanced_kp_fit, year, doy, version, show=show, hold=hold, $
                          save=save, rezero=rezero, $
                          averaging_length = averaging_length, $
                          flybacks=flybacks, $
                          neg_offset=neg_offset, verbose=verbose, $
-                         moment_threshold = moment_threshold
+                         moment_threshold = moment_threshold,    $
+                         clobber = clobber
 
 mp = 1.67262178d-27             ; SI units
 kb = 1.3806488d-23              ;  SI units
