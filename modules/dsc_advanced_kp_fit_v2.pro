@@ -1403,9 +1403,9 @@ end
 ;
 ; ---------------------------------------------------------------------
 
-pro advkp_doyrange, year, d1, d2, save=save, rezero=rezero, show=show
+pro advkp_doyrange, year, d1, d2, version, save=save, rezero=rezero, show=show, clobber=clobber
 
-for thisday = d1, d2 do dsc_advanced_kp_fit, year, thisday, save=save, rezero=rezero, show=show
+for thisday = d1, d2 do dsc_advanced_kp_fit, year, thisday, version, save=save, rezero=rezero, show=show, clobber=clobber
 
 end
 
