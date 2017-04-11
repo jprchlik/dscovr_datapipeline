@@ -43,6 +43,12 @@
 ;
 ; ABERATION CORRECTION NOW IN PROGRAM HOWEVER REPROCESSING OF ALL TIME NOT COMPLETE (PRCHLIK, J 2017/03/16); 
 ;
+;NOTE ON CLOBBER KEYWORD
+;If the IDL save file already exits at the version you want do not set clobber keyword.
+;This way the program sees the idl exists and creates the cdf file from that file at the newest version (rapid)
+;If you set clobber you will overwrite the previous idl save file and create the cdf file at the current version (slow).
+;If you do not set the clobber keyword but the file is not yet processed then setting clobber is irrelavent because 
+;a new idl and cdf file will be created at the most recent version (slow).
 ;
 ;
 ;
@@ -758,11 +764,51 @@ load_plasma
 setenv,'LD_LIBRARY_PATH=/usr/local/rsi/idl_6.3/bin/bin.linux.x86:/home/cdaweb/lib'
 resolve_routine,'idlmakecdf',/COMPILE_FULL
 
+;check if clobber is set
+if keyword_set(clobber) then clober = 1 else clobber = 0
+
+;Check to see if any file are created in current version (sav file created in idl_dscovr_to_cdf)
+savefmt = '("dscovr_file_status_v",I02,".idl")'
+savefil = string([version],format=savefmt)
+version_save = file_test(savefil)
+
+; (1.1) check if file is already process if version file exists
+if ((version_save eq 1) and (clobber ne 1)) then begin
+
+
+
+;restore the version savefile
+    restore,savefil,/RELAXED_STRUCTURE_ASSIGNMENT
+
+;check if file is fully processed (i.e. idl and cdf file already exists)
+    cdf_find = size(where(((v_struct.obs_year eq year) and (v_struct.obs_doy eq doy))))
+
+;Use idl file format to check if savefile exists 
+    path =  '/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected/'
+    prefix =  '("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl")'
+    idl_file = string([year,doy],format=prefix)
+    idl_find = file_test(prefix+idl_file)
+    
+
+;Case to run only components if partially or fully processed
+    case 1 of 
+        idl_find eq 0: print,'Day Unprocessed Proceeding...'
+        idl_find eq 1 and cdf_find[0] eq 0: print,'IDL file created but no cdf. Creating cdf'
+        idl_find eq 1 and cdf_find[0] eq 1: begin
+            print,'All files already created for given day (set clobber to overwrite).'
+            exit
+        end
+    endcase
+
+
+endif
+
+
 
 restore, '/crater/observatories/dscovr/code/modules/dsc_Vwindows.idl'
 loadct, 39
 
-;Allows for xwindow plotting
+; (1.2) Allows for xwindow plotting in batch mode
 device, decomposed = 0
 device, RETAIN=2
 DLM_LOAD,'PNG' ;Added so PNG file creation cannot error
