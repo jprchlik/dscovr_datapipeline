@@ -181,6 +181,7 @@ ddd= root.NP_DELTA.dat
 ;Proton thermal speed 
 dew = 1.E-3*sqrt(2.*kb/mp*root.THERMAL_TEMP.dat)
 ddew= 1.E-3*sqrt(2.*kb/mp/root.THERMAL_TEMP.dat)*root.THERMAL_TEMP_DELTA.dat*0.5
+;ddew=0.5*(root.THERMAL_TEMP_DELTA.dat/root.THERMAL_TEMP.dat) errbar sanity check
 
 
 
@@ -412,7 +413,7 @@ use = where(dew gt -9998.)
 plot,ddoy[use],dwdw[use],psym=6,color=0,ytitle='Th. Speed [km/s]',/NOERASE, $
     /nodata,background=255,charsize=2,font=1,charthick=3,position=plot2,xtickformat="(A1)"
 for i=0,n_elements(ddoy)-1 do begin
-    error_bars,ddoy[i],dwdw[i],dew[i],ex,ey
+    error_bars,ddoy[i],dwdw[i],ddew[i],ex,ey
     if dew[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
 endfor
 oplot,ddoy,dwdw,psym=8,color=dcol
