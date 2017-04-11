@@ -777,23 +777,22 @@ if ((clobber ne 1) and keyword_set(save)) then begin
 
 
 
-;Check on currect status of cdf file in version if version file exists
+    ;Check on currect status of cdf file in version if version file exists
     if version_save eq 1 then begin
-    ;restore the version savefile
+        ;restore the version savefile
         restore,savefil,/RELAXED_STRUCTURE_ASSIGNMENT
-    ;check if file is fully processed (i.e. idl and cdf file already exists)
+        ;check if file is fully processed (i.e. idl and cdf file already exists)
         cdf_find = size(where(((v_struct.obs_year eq year) and (v_struct.obs_doy eq doy))))
-;if current version save file does not exits then will need to create a new save file so
-;set cdf_find = 0
+    ;if current version save file does not exits then will need to create a new save file so
+    ;set cdf_find = 0
     endif else cdf_find=0
 
-;Use idl file format to check if savefile exists 
+    ;Use idl file format to check if savefile exists 
     path =  '/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected/'
     prefix =  '("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl")'
     idl_file = string([year,doy],format=prefix)
     idl_find = file_test(path+idl_file)
 
-    print,idl_find,cdf_find[0]
    
     
 
@@ -802,8 +801,9 @@ if ((clobber ne 1) and keyword_set(save)) then begin
         idl_find eq 0: print,'Day Unprocessed Proceeding...'
         idl_find eq 1 and cdf_find[0] eq 0: begin
             print,'IDL file created but no cdf. Creating cdf'
-            idl_dscovr_to_cdf,fix(yyyy),fix(ddd),version ;create 1minute cdf files based on doy and year
-            compare_wind_dscovr,fix(yyyy),fix(ddd),version ;create plot comparing 1minute dscovr data to wind observations
+            idl_dscovr_to_cdf,fix(year),fix(doy),version ;create 1minute cdf files based on doy and year
+            compare_wind_dscovr,fix(year),fix(doy),version ;create plot comparing 1minute dscovr data to wind observations
+            return
         end
         idl_find eq 1 and cdf_find[0] eq 1: begin
             print,'All files already created for given day (set clobber to overwrite).'
@@ -1377,8 +1377,8 @@ if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and co
     advkp_save, adv_kp, dfc_kp, dfc_kp_1min, yyyy, ddd
     ;load newly created save file and apply correction
     apply_empirical_corrections_1min, fix(yyyy),fix(ddd),fix(ddd)+1
-    idl_dscovr_to_cdf,fix(yyyy),fix(ddd),3 ;create 1minute cdf files based on doy and year
-    compare_wind_dscovr,fix(yyyy),fix(ddd),3 ;create plot comparing 1minute dscovr data to wind observations
+    idl_dscovr_to_cdf,fix(yyyy),fix(ddd),version ;create 1minute cdf files based on doy and year
+    compare_wind_dscovr,fix(yyyy),fix(ddd),version ;create plot comparing 1minute dscovr data to wind observations
 ;setup idl structures
 
 
