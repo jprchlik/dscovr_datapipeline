@@ -1376,7 +1376,7 @@ rangechecks, dfc_kp_1min
 if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and compare plot under save)
     advkp_save, adv_kp, dfc_kp, dfc_kp_1min, yyyy, ddd
     ;load newly created save file and apply correction
-    apply_empirical_corrections_1min, fix(yyyy),fix(ddd),fix(ddd)+1
+;    apply_empirical_corrections_1min, fix(yyyy),fix(ddd),fix(ddd)+1
     idl_dscovr_to_cdf,fix(yyyy),fix(ddd),version ;create 1minute cdf files based on doy and year
     compare_wind_dscovr,fix(yyyy),fix(ddd),version ;create plot comparing 1minute dscovr data to wind observations
 ;setup idl structures
