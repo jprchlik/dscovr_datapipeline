@@ -1575,10 +1575,10 @@ end
 ;
 ; ---------------------------------------------------------------------
 
-pro apply_empirical_corrections_1min, year, d1, d2, path=path, verbose=verbose
+pro apply_empirical_corrections_1min, year, d1, d2, path=path, verbose=verbose,derive=derive
   
   if keyword_set(verbose) then print, 'deriving empirical corrections'
-  derive_empirical_corrections, year, d1, d2, coeffs, wfactor
+  if keyword_set(derive) then derive_empirical_corrections, year, d1, d2, coeffs, wfactor
   
   yyyy = string(year, format = '(I4)')
   prefix =  'dsc_fc_advkp_1minute'
