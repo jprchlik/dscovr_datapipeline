@@ -31,6 +31,8 @@
 pro file_version_temp
 
 tmp = {file_data, $
+       obs_year:fix(0),$
+       obs_doy:fix(0),$
        idl_dir:'',$
        cdf_dir:'',$
        idl_file:'',$
@@ -362,6 +364,8 @@ cdf_date_jul = double(JULDAY(fix(strmid(cdf_date_str,5,2)),fix(strmid(cdf_date_s
 
 
 tmp_s= {file_data, $
+       obs_year:year,$
+       obs_doy:doy,$
        idl_dir:archive,$
        cdf_dir:orchive,$
        idl_file:bfil,$
