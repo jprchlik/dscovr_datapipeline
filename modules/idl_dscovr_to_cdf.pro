@@ -293,7 +293,7 @@ if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
 
 ;fix for solar wind's aberration in Y component
 ;solab = 29.78 ;km/s
-vgse[1,*] = vgse[1,*];-solab; Moved to advanced dsc_advanced_kp_fit_v2
+vgse[1,*] = vgse[1,*];-solab; Moved to advanced dsc_advanced_kp_fit_v2 (2017/04/07 J. Prchlik)
 
 
 ; put values into variables
