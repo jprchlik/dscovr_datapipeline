@@ -236,12 +236,16 @@ uy = reform(ugse[*, 1])-solab ; Add (2017/04/07 Prchlik. J)
 uz = reform(ugse[*, 2])
 umag = sqrt(ux^2 + uy^2 + uz^2)
 uperp = sqrt(umag^2 - ux^2)
-ang = uperp/umag ; RADIAN
-; derive error from uperp = umag*ang
-dang = (1./ang) * sqrt(((phi*!dtor)*  dphi  *!dtor)^2 + $
-                       ((theta*!dtor)*dtheta*!dtor)^2)
-duperp = sqrt(((uperp/ang)*dang)^2 + ((uperp/umag)*du)^2)
-dupar = sqrt( ((ux/umag)*du)^2)
+
+alpha = sqrt(phi^2 + theta^2)
+dalpha = sqrt(dphi^2 + dtheta^2)
+dupar = du
+duperp1 =  sqrt( (du^2)*(tan(phi*!dtor)^2) + $ 
+               (ux^2)*((!dtor*dphi)^2)/(cos(phi*!dtor)^4))
+duperp2 =  sqrt( (du^2)*(tan(theta*!dtor)^2) + $ 
+               (ux^2)*((!dtor*dtheta)^2)/(cos(theta*!dtor)^4))
+duperp = sqrt(duperp1^2 + duperp2^2)
+
 dux = dupar
 duy = duperp
 duz = duperp
@@ -1142,7 +1146,7 @@ while i lt nspec do begin
     n_basic = n_elements(sel)
     fit = CALL_FUNCTION('curvefit', x[sel], y[sel], w[sel], A, sigma_basic, /DOUBLE, $ 
                         FUNCTION_NAME='one_gaussian', $
-			CHISQ=chisq_basic)     
+                       CHISQ=chisq_basic)     
     fitpars_1min[*, i] = a
     fitsig_1min[*, i] = sigma_basic
     fitchisq_1min[i] = chisq_basic
@@ -1160,7 +1164,7 @@ while i lt nspec do begin
 
     test = CALL_FUNCTION('curvefit', x[sel2], y[sel2], w[sel2], aa, sigma, /DOUBLE, $ 
                         FUNCTION_NAME='two_gaussians', $
-			/NODERIVATIVE, ITMAX=itmax, ITER=it, tol=tol_init, CHISQ=chisq )  
+                       /NODERIVATIVE, ITMAX=itmax, ITER=it, tol=tol_init, CHISQ=chisq )  
     if abs(aa[5]) gt 250. then aa = [a[0], a[1], a[2], 0., 0., -9999.]  
     if abs(aa[2]) gt 250. then aa = [a[0], a[1], a[2], 0., 0., -9999.]  
     if aa[1] gt aa[4] and aa[4] ne 0. then begin  
@@ -1212,15 +1216,15 @@ while i lt nspec do begin
     momsel = where(y gt moment_threshold*ymax and momregions eq momregions[x0])
     ;if n_elements(momsel) le 1 then momsel = indgen(n_elements(x))
     if n_elements(momsel) lt 5 then momsel = [x0-2, x0-1, x0, x0+1, x0+2] ; mls 4/6 noaa pipeline selection (1)
-    ok = where(momsel lt 63) ; MLS 4/6 noaa pipeline selection (2)
-    momsel = momsel[ok]      ; MLS 4/6 noaa pipeline selection (3)
+    ok = where(momsel lt 63 and momsel gt 1) ; MLS 4/6 noaa pipeline selection (2)
+    momsel = momsel[ok]                      ; MLS 4/6 noaa pipeline selection (3)
 
-
-    mom0 = total((y*dx)[momsel])  
-    mom1 = total((y*x*dx)[momsel])/mom0  
-    mom2 = total((y*(x-mom1)*(x-mom1)*dx)[momsel])/mom0  
-    mom3 = total((y*(x-mom1)*(x-mom1)*(x-mom1)*dx/mom0)[momsel])/mom0  
-    F_ratio = min(y[momsel])/max(y[momsel])
+    yg0 = y>0 ; MLS 4/18 possible to have negative y on low energy side of the peak. Coordinated with Jeff
+    mom0 = total((yg0*dx)[momsel])  
+    mom1 = total((yg0*x*dx)[momsel])/mom0  
+    mom2 = total((yg0*(x-mom1)*(x-mom1)*dx)[momsel])/mom0  
+    mom3 = total((yg0*(x-mom1)*(x-mom1)*(x-mom1)*dx/mom0)[momsel])/mom0  
+    F_ratio = min(yg0[momsel])/max(yg0[momsel])
     qfac = sqrt(-alog(F_ratio))
     D0P = 1./erf(qfac)
     D1P = 1.
@@ -1376,7 +1380,7 @@ rangechecks, dfc_kp_1min
 if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and compare plot under save)
     advkp_save, adv_kp, dfc_kp, dfc_kp_1min, yyyy, ddd
     ;load newly created save file and apply correction
-    apply_empirical_corrections_1min, fix(yyyy),fix(ddd)-30,fix(ddd)+10
+    apply_empirical_corrections_1min, fix(yyyy),fix(ddd)-45,fix(ddd)+45
     idl_dscovr_to_cdf,fix(yyyy),fix(ddd),version ;create 1minute cdf files based on doy and year
     compare_wind_dscovr,fix(yyyy),fix(ddd),version ;create plot comparing 1minute dscovr data to wind observations
 ;setup idl structures
@@ -1559,7 +1563,7 @@ match = where(abs(uw_i - u) lt 10 and nw_i gt 0 and n gt 0 $
  match = where(abs(uw_i - u) lt 10 and nw_i gt 0 and n gt 0)
  wfactor = median( (ww_i/w)[match] )
 
-; the y abberation is still uncorrected (29.064 km/s)
+
 
 end
 
