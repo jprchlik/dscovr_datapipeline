@@ -184,7 +184,6 @@ ddew= 1.E-3*sqrt(2.*kb/mp/root.THERMAL_TEMP.dat)*root.THERMAL_TEMP_DELTA.dat*0.5
 ;ddew=0.5*(root.THERMAL_TEMP_DELTA.dat/root.THERMAL_TEMP.dat) errbar sanity check
 
 
-
 ;============================================================
 ; Set up plots Section 1.2
 ;============================================================
