@@ -37,7 +37,7 @@
 ;    samp = sampling fequence in minutes
 ;--------------------------------------------------
 function chi_min_time,wdoy,wx,ddoy,dx,ddx=ddx,span=span,samp=samp
-if keyword_set(span) then span = span else span = 10 ;span to loop +/- in minutes
+if keyword_set(span) then span = span else span = 25 ;span to loop +/- in minutes
 if keyword_set(samp) then samp = samp else samp = 0.50 ; sampling fequency in minutes
 if keyword_set(ddx) then ddx = ddx else ddx = fltarr(n_elements(dx))+1.
 
@@ -53,10 +53,9 @@ cvals = fltarr(nbins) ; array of zeros to store chi^2 vals
 ;loop over points for chi2 sampling
 for i=0,nbins-1 do begin
     ;create spline from wind data assuming small sigma
-;    sdd = spline(wdoy,wd,ddoy+tvals[i])-dd
-    sdx = spline(wdoy,wx,ddoy+tvals[i])-dx
-;    sdy = spline(wdoy,wy,ddoy+tvals[i])-dy
-;    sdz = spline(wdoy,wz,ddoy+tvals[i])-dz
+    offset = ddoy+tvals[i]
+    sdx = interpol(wx,wdoy,offset)
+    sdx = temporary(sdx)-dx
     chi2 = total(sdx^2/ddx^2)
 ;store chi2 val
     cvals[i] = chi2
@@ -70,16 +69,16 @@ ftvals = findgen(fnbins)*fsamp-span
 fcvals = spline(tvals,cvals,ftvals) ; array of of chi^2 vals
 
 ;minimum chi^2 
-chim = where(fcvals eq min(fcvals))
+chim = where(fcvals eq min(fcvals,/nan))
 if n_elements(size(chim)) gt 3 then begin ;move the time as little as possible
     dtime = ftvals[chim]
-    minmo = where(abs(dtime) eq min(abs(dtime))) ; move the minimum amount
+    minmo = where(abs(dtime) eq min(abs(dtime),/nan)) ; move the minimum amount
     dtime = dtime[minmo]
 endif else begin 
     dtime = 0. ; return 0 if no min??
 endelse
-print,'Chi^2 min value',strcompress(min(fcvals),/remove_all)
-print,'Chi^2 time offset',strcompress(dtime*24.*60.),'min'
+;print,'Chi^2 min value',strcompress(min(fcvals),/remove_all)
+;print,'Chi^2 time offset',strcompress(dtime*24.*60.),'min'
 
 
 return,dtime
@@ -108,12 +107,14 @@ wcut = where(wvx gt -9990.0)
 ;loop over all days in year
 for i =0,n_elements(days) - 1 do begin 
     cut = where((iday eq days[i]) and (vx gt -9990.0))
-    deldoy = chi_min_time(wdoy[wcut],wvx[wcut],doy[cut],vx[cut],ddx=dvx)
-    new_doy[cut] = doy[cut]+deldoy;add time offset to new array
-
+    rep = where(iday eq days[i])
+    deldoy = chi_min_time(wdoy[wcut],wvx[wcut],doy[cut],vx[cut],ddx=dvx[cut])
+    new_doy[rep] = deldoy;add time offset to new array
 endfor
 
-return,new_doy
+doy = doy+new_doy 
+
+return,doy
 end
 
 
@@ -157,26 +158,28 @@ for i=0,nyear-1 do begin
         load_plasma,ryear[i],tsdoy,tedoy,/WIND,doy=wdoy,bx=wbx,by=wby,bz=wbz,bmag=wbmag,vmag=wvmag,vy=wvy,vx=wvx,vz=wvz,t=wt,den=wden,x=wx,y=wy,z=wz
 
 ;correct for orbital time offsets DSCOVR/WIND
-        ddoy = time_offset_cor(wdoy,wvx,ddoy,dvx)
+        ddoy = time_offset_cor(wdoy,wvx,temporary(ddoy),dvx)
 
 ;do the same for ace
         load_plasma,ayear[i],tsdoy,tedoy,/ACE,doy=adoy,bx=abx,by=aby,bz=abz,bmag=abmag,vmag=avmag,vy=avy,vx=avx,vz=avz,t=at,den=aden,x=ax,y=ay,z=az
         load_plasma,ayear[i],tsdoy,tedoy,/WIND,doy=idoy,bx=ibx,by=iby,bz=ibz,bmag=ibmag,vmag=ivmag,vy=ivy,vx=ivx,vz=ivz,t=it,den=iden,x=ix,y=iy,z=iz
 ;correct for orbital time offsets ACE/WIND
-        adoy = time_offset_cor(wdoy,wvx,adoy,avx)
+        adoy = time_offset_cor(idoy,ivx,temporary(adoy),avx)
 
     endif else begin
          tsdoy = 1
          load_plasma,ryear[i],tsdoy,tedoy,/DSC,doy=tddoy,bx=tdbx,by=tdby,bz=tdbz,bmag=tdbmag,vmag=tdvmag,vy=tdvy,vx=tdvx,vz=tdvz,t=tdt,den=tdden,x=tdx,y=tdy,z=tdz
          load_plasma,ryear[i],tsdoy,tedoy,/WIND,doy=twdoy,bx=twbx,by=twby,bz=twbz,bmag=twbmag,vmag=twvmag,vy=twvy,vx=twvx,vz=twvz,t=twt,den=twden,x=twx,y=twy,z=twz
 ;correct for orbital time offsets DSCOVR/WIND
-         tddoy = time_offset_cor(wdoy,wvx,tddoy,tdvx)
+         print,'DSCOVR 2'
+         tddoy = time_offset_cor(twdoy,twvx,temporary(tddoy),tdvx)
 
 ;do the same for ace
          load_plasma,ayear[i],tsdoy,tedoy,/ACE,doy=tadoy,bx=tabx,by=taby,bz=tabz,bmag=tabmag,vmag=tavmag,vy=tavy,vx=tavx,vz=tavz,t=tat,den=taden,x=tax,y=tay,z=taz
          load_plasma,ayear[i],tsdoy,tedoy,/WIND,doy=tidoy,bx=tibx,by=tiby,bz=tibz,bmag=tibmag,vmag=tivmag,vy=tivy,vx=tivx,vz=tivz,t=tit,den=tiden,x=tix,y=tiy,z=tiz
 ;correct for orbital time offsets ACE/WIND
-         tadoy = time_offset_cor(wdoy,wvx,tadoy,tavx)
+         print,'ACE 2'
+         tadoy = time_offset_cor(tidoy,tivx,temporary(tadoy),tavx)
 
 
 
@@ -253,8 +256,8 @@ endfor
 fillval = -9990.0
 
 ;Remove bad information DSCOVR
-dgood = where((dbx gt fillval) and (dby gt fillval) and (dbz gt fillval) and (dbmag gt fillval) and (dvmag gt fillval) $
-    and (dvx gt fillval) and (dvy gt fillval) and (dvz gt fillval) and (dt gt fillval) and (dden gt fillval)) 
+dgood = where((dvmag gt fillval) $
+    and (dvx gt fillval) and (dvy gt fillval) and (dvz gt fillval) and (dt gt fillval) and (dden gt fillval) and (dden le 1000) ) ;max to kill density value of 1.9E10
 ddoy = ddoy [dgood]
 dbx  = dbx  [dgood]
 dby  = dby  [dgood]
@@ -271,9 +274,8 @@ dy   = dy   [dgood]
 dz   = dz   [dgood]
 
 ;Remove bad information WIND
-wgood = where((wbx gt fillval) and (wby gt fillval) and (wbz gt fillval) and (wbmag gt fillval) and (wvmag gt fillval) $
-    and (wvx gt fillval) and (wvy gt fillval) and (wvz gt fillval) and (wt gt fillval) and (wden gt fillval) $
-    and (wx gt fillval) and (wy gt fillval) and (wz gt fillval))
+wgood = where((wvmag gt fillval) $
+    and (wvx gt fillval) and (wvy gt fillval) and (wvz gt fillval) and (wt gt fillval) and (wden gt fillval)) 
 wdoy = wdoy [wgood]
 wbx  = wbx  [wgood]
 wby  = wby  [wgood]
@@ -290,9 +292,8 @@ wy   = wy   [wgood]
 wz   = wz   [wgood]
 
 ;Remove bad information ACE
-agood = where((abx gt fillval) and (aby gt fillval) and (abz gt fillval) and (abmag gt fillval) and (avmag gt fillval) $
-    and (avx gt fillval) and (avy gt fillval) and (avz gt fillval) and (at gt fillval) and (aden gt fillval) $
-    and (ax gt fillval) and (ay gt fillval) and (az gt fillval))
+agood = where((avmag gt fillval) $
+    and (avx gt fillval) and (avy gt fillval) and (avz gt fillval) and (at gt fillval) and (aden gt fillval) )
 adoy = adoy [agood]
 abx  = abx  [agood]
 aby  = aby  [agood]
@@ -308,10 +309,9 @@ ax   = ax   [agood]
 ay   = ay   [agood]
 az   = az   [agood]
 
-;Remove bad information DSCOVR
-igood = where((ibx gt fillval) and (iby gt fillval) and (ibz gt fillval) and (ibmag gt fillval) and (ivmag gt fillval) $
-    and (ivx gt fillval) and (ivy gt fillval) and (ivz gt fillval) and (it gt fillval) and (iden gt fillval) $
-    and (ix gt fillval) and (iy gt fillval) and (iz gt fillval))
+;Remove bad information WIND
+igood = where( (ivmag gt fillval) $
+    and (ivx gt fillval) and (ivy gt fillval) and (ivz gt fillval) and (it gt fillval) and (iden gt fillval)) 
 idoy = idoy [igood]
 ibx  = ibx  [igood]
 iby  = iby  [igood]
@@ -449,6 +449,7 @@ strsigddwbmag =  mu+string([ mean(ddwbmag)],format=sigfmt)+", med"+string([ medi
 strsigddwvmag =  mu+string([ mean(ddwvmag)],format=sigfmt)+", med"+string([ median(ddwvmag)],format=sigfmt)+", "+sigma+string([ sigddwvmag],format=sigfmt)
 strsigddwt    =  mu+string([ mean(ddwt   )],format=sigfmt)+", med"+string([ median(ddwt   )],format=sigfmt)+", "+sigma+string([ sigddwt   ],format=sigfmt)
 strsigddwden  =  mu+string([ mean(ddwden )],format=sigfmt)+", med"+string([ median(ddwden )],format=sigfmt)+", "+sigma+string([ sigddwden ],format=sigfmt)
+print,mean(ddwden),sigddwden
                                                                                                         
 ;string for ACE  sigmas                                       
 strsigdaibx   =  mu+string([ mean(daibx  )],format=sigfmt)+", med"+string([ median(daibx  )],format=sigfmt)+", "+sigma+string([ sigdaibx  ],format=sigfmt)
@@ -507,33 +508,44 @@ vzsize = 10
 desize = 0.5
 thsize = 5
 vxrange = [-100,100]
-vyrange = [0,50]
+vyrange = [0,55]
 
 ;locations for xyouts
 xxylocd = -95 
-yxylocd = 45
-yxyloca = 42
+yxylocd = 47
+yxyloca = 43
 
+;plot locations
+plot1 = [.08,.6,.32,.95]
+plot2 = [.41,.6,.65,.95]
+plot3 = [.74,.6,.98,.95]
+plot4 = [.08,.10,.32,.45]
+plot5 = [.41,.10,.65,.45] 
+plot6 = [.74,.10,.98,.45]
+
+;-----------------------------------------------------------------------------
+;Compare distributions for ACE and DSCOVR
+;-----------------------------------------------------------------------------
 
 ;Measured Velocity components dscovr
-vxdwhist = histogram(ddwvx,binsize=vxsize,location=vxdwbins,min=-100,max=100)
+vxdwhist = histogram(ddwvx,binsize=vxsize,location=vxdwbins,min=-1000,max=1000)
 format_hist,vxdwhist,vxdwbins,vxsize
-vydwhist = histogram(ddwvy,binsize=vysize,location=vydwbins,min=-100,max=100)
+vydwhist = histogram(ddwvy,binsize=vysize,location=vydwbins,min=-1000,max=1000)
 format_hist,vydwhist,vydwbins,vysize
-vzdwhist = histogram(ddwvz,binsize=vzsize,location=vzdwbins,min=-100,max=100)
+vzdwhist = histogram(ddwvz,binsize=vzsize,location=vzdwbins,min=-1000,max=1000)
 format_hist,vzdwhist,vzdwbins,vzsize
 
 ;Measured Velocity components  ace
-vxaihist = histogram(daivx,binsize=vxsize,location=vxaibins,min=-100,max=100)
+vxaihist = histogram(daivx,binsize=vxsize,location=vxaibins,min=-1000,max=1000)
 format_hist,vxaihist,vxaibins,vxsize
-vyaihist = histogram(daivy,binsize=vysize,location=vyaibins,min=-100,max=100)
+vyaihist = histogram(daivy,binsize=vysize,location=vyaibins,min=-1000,max=1000)
 format_hist,vyaihist,vyaibins,vysize
-vzaihist = histogram(daivz,binsize=vzsize,location=vzaibins,min=-100,max=100)
+vzaihist = histogram(daivz,binsize=vzsize,location=vzaibins,min=-1000,max=1000)
 format_hist,vzaihist,vzaibins,vzsize
 
 ;plot measured velocity components
 plot,vxdwbins,vxdwhist,psym=10, $
-    xtitle=delta+'Vx (X-WIND) [km/s]',ytitle='Occurence [%]',position=[.08,.6,.32,.95], $
+    xtitle=delta+'Vx (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot1, $
     xrange=vxrange,yrange=vyrange
     oplot,vxaibins,vxaihist,psym=10,color=200
     xyouts,xxylocd,yxylocd,strsigddwvx,charsize=1.5,charthick=2.5
@@ -542,14 +554,14 @@ plot,vxdwbins,vxdwhist,psym=10, $
     xyouts,55,yxyloca,'(ACE)',charsize=1.5,charthick=2.5,color=200
 
 plot,vydwbins,vydwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Vy (X-WIND) [km/s]',ytitle='Occurence [%]',position=[.41,.6,.65,.95], $
+    xtitle=delta+'Vy (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot2, $
     xrange=vxrange,yrange=vyrange
-    oplot,vyaibins,100.*vyaihist/float(total(vyaihist)),psym=10,color=200
+    oplot,vyaibins,vyaihist,psym=10,color=200
     xyouts,xxylocd,yxylocd,strsigddwvy,charsize=1.5,charthick=2.5
     xyouts,xxylocd,yxyloca,strsigdaivy,charsize=1.5,charthick=2.5,color=200
 
 plot,vzdwbins,vzdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Vz (X-WIND) [km/s]',ytitle='Occurence [%]',position=[.74,.6,.98,.95], $
+    xtitle=delta+'Vz (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot3, $
     xrange=vxrange,yrange=vyrange
     oplot,vzaibins,vzaihist,psym=10,color=200
     xyouts,xxylocd,yxylocd,strsigddwvz,charsize=1.5,charthick=2.5
@@ -557,46 +569,159 @@ plot,vzdwbins,vzdwhist,psym=10,/NOERASE, $
 
 
 ;Measured Velocity components 
-vmagdwhist = histogram(ddwvmag,binsize=vxsize,location=vmagdwbins,min=-100,max=100)
+vmagdwhist = histogram(ddwvmag,binsize=vxsize,location=vmagdwbins,min=-1000,max=1000)
 format_hist,vmagdwhist,vmagdwbins,vxsize
-tdwhist = histogram(ddwt,binsize=thsize,location=tdwbins,min=-100,max=100)
+tdwhist = histogram(ddwt,binsize=thsize,location=tdwbins,min=-1000,max=1000)
 format_hist,tdwhist,tdwbins,thsize
-dendwhist = histogram(ddwden,binsize=desize,location=dendwbins,min=-10,max=10)
+dendwhist = histogram(ddwden,binsize=desize,location=dendwbins,min=-1000,max=1000)
 format_hist,dendwhist,dendwbins,desize
 
 ;Measured Velocity components 
-vmagaihist = histogram(daivmag,binsize=vxsize,location=vmagaibins,min=-100,max=100)
+vmagaihist = histogram(daivmag,binsize=vxsize,location=vmagaibins,min=-1000,max=1000)
 format_hist,vmagaihist,vmagaibins,vxsize
-taihist = histogram(dait,binsize=thsize,location=taibins,min=-100,max=100)
+taihist = histogram(dait,binsize=thsize,location=taibins,min=-1000,max=1000)
 format_hist,taihist,taibins,thsize
-denaihist = histogram(daiden,binsize=desize,location=denaibins,min=-10,max=10)
+denaihist = histogram(daiden,binsize=desize,location=denaibins,min=-1000,max=1000)
 format_hist,denaihist,denaibins,desize
 
 ;plot measured velocity components
 plot,vmagdwbins,vmagdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Speed (X-WIND) [km/s]',ytitle='Occurence [%]',position=[.08,.10,.32,.45], $
+    xtitle=delta+'Speed (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot4, $
     xrange=vxrange,yrange=vyrange
     oplot,vmagaibins,vmagaihist,psym=10,color=200
     xyouts,xxylocd,yxylocd,strsigddwvmag,charsize=1.5,charthick=2.5
     xyouts,xxylocd,yxyloca,strsigdaivmag,charsize=1.5,charthick=2.5,color=200
 
 plot,tdwbins,tdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Th. Speed (X-WIND) [km/s]',ytitle='Occurence [%]',position=[.41,.10,.65,.45], $
+    xtitle=delta+'Th. Speed (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot5, $
     xrange=[-50,50],yrange=vyrange
     oplot,taibins,taihist,psym=10,color=200
     xyouts,-55,yxylocd,strsigddwt,charsize=1.5,charthick=2.5
     xyouts,-55,yxyloca,strsigdait,charsize=1.5,charthick=2.5,color=200
 
 plot,dendwbins,dendwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Den. (X-WIND) [cm^-3]',ytitle='Occurence [%]',position=[.74,.10,.98,.45], $
+    xtitle=delta+'Den. (X-WIND) [cm^-3]',ytitle='Occurence [%]',position=plot6, $
     xrange=[-5,5],yrange=vyrange
     oplot,denaibins,denaihist,psym=10,color=200
     xyouts,-5.2,yxylocd,strsigddwden,charsize=1.5,charthick=2.5
     xyouts,-5.2,yxyloca,strsigdaiden,charsize=1.5,charthick=2.5,color=200
 
-
-
 write_png,'../compare_plots/compare_grid.png',tvrd(/true)
 
+;-----------------------------------------------------------------------------
+;Compare log distributions for ACE and DSCOVR
+;-----------------------------------------------------------------------------
 
+lvyrange = [-4,alog10(90)]
+
+;yrange for 2 simga overplotting
+ysiglim = [-10000,10000]
+;plot measured velocity components
+plot,vxdwbins,alog10(vxdwhist),psym=10, $
+    xtitle=delta+'Vx (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot1, $
+    xrange=vxrange*5,yrange=lvyrange
+    oplot,vxaibins,alog10(vxaihist),psym=10,color=200
+    oplot,sigddwvx,yrange,psym=10
+
+plot,vydwbins,alog10(vydwhist),psym=10,/NOERASE, $
+    xtitle=delta+'Vy (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot2, $
+    xrange=vxrange*3,yrange=lvyrange
+    oplot,vyaibins,alog10(vyaihist),psym=10,color=200
+
+plot,vzdwbins,alog10(vzdwhist),psym=10,/NOERASE, $
+    xtitle=delta+'Vz (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot3, $
+    xrange=vxrange*3,yrange=lvyrange
+    oplot,vzaibins,alog10(vzaihist),psym=10,color=200
+
+
+;plot measured velocity components
+plot,vmagdwbins,alog10(vmagdwhist),psym=10,/NOERASE, $
+    xtitle=delta+'Speed (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot4, $
+    xrange=vxrange*5,yrange=lvyrange
+    oplot,vmagaibins,alog10(vmagaihist),psym=10,color=200
+
+plot,tdwbins,alog10(tdwhist),psym=10,/NOERASE, $
+    xtitle=delta+'Th. Speed (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot5, $
+    xrange=[-50,50]*3,yrange=lvyrange
+    oplot,taibins,alog10(taihist),psym=10,color=200
+
+plot,dendwbins,alog10(dendwhist),psym=10,/NOERASE, $
+    xtitle=delta+'Den. (X-WIND) [cm^-3]',ytitle='log(Occurence) [log(%)]',position=plot6, $
+    xrange=[-5,5]*10,yrange=lvyrange
+    oplot,denaibins,alog10(denaihist),psym=10,color=200
+
+write_png,'../compare_plots/compare_grid_log.png',tvrd(/true)
+
+;-----------------------------------------------------------------------------
+;Check that plot ranges are similar for ACE and DSCOVR
+;-----------------------------------------------------------------------------
+
+;Measured Velocity components dscovr
+vxdhist = histogram(dvx,binsize=20,location=vxdbins,min=-1000,max=1000)
+format_hist,vxdhist,vxdbins,vxsize
+vydhist = histogram(dvy,binsize=vysize,location=vydbins,min=-1000,max=1000)
+format_hist,vydhist,vydbins,vysize
+vzdhist = histogram(dvz,binsize=vzsize,location=vzdbins,min=-1000,max=1000)
+format_hist,vzdhist,vzdbins,vzsize
+
+;Measured Velocity components  ace
+vxahist = histogram(avx,binsize=20,location=vxabins,min=-1000,max=1000)
+format_hist,vxahist,vxabins,vxsize
+vyahist = histogram(avy,binsize=vysize,location=vyabins,min=-1000,max=1000)
+format_hist,vyahist,vyabins,vysize
+vzahist = histogram(avz,binsize=vzsize,location=vzabins,min=-1000,max=1000)
+format_hist,vzahist,vzabins,vzsize
+
+;plot measured velocity components
+yrange2 = [0.,25.]
+plot,vxdbins,vxdhist,psym=10, $
+    xtitle='Vx [km/s]',ytitle='Occurence [%]',position=plot1,$
+    xrange=[-800.,-200.],yrange=yrange2,ystyle=1
+    oplot,vxabins,vxahist,psym=10,color=200
+
+plot,vydbins,vydhist,psym=10, /NOERASE, $
+    xtitle='Vy [km/s]',ytitle='Occurence [%]',position=plot2,$
+    xrange=[-200.,200.],yrange=yrange2,ystyle=1
+    oplot,vyabins,vyahist,psym=10,color=200
+
+plot,vzdbins,vzdhist,psym=10, /NOERASE, $
+    xtitle='Vz [km/s]',ytitle='Occurence [%]',position=plot3,$
+    xrange=[-200,200.],yrange=yrange2,ystyle=1
+    oplot,vzabins,vzahist,psym=10,color=200
+
+;Measured Physical components DSCOVR 
+vmagdhist = histogram(dvmag,binsize=20,location=vmagdbins,min=-1000,max=1000)
+format_hist,vmagdhist,vmagdbins,vxsize
+tdhist = histogram(dt,binsize=thsize,location=tdbins,min=-1000,max=1000)
+format_hist,tdhist,tdbins,thsize
+dendhist = histogram(dden,binsize=desize,location=dendbins,min=-1000,max=1000)
+format_hist,dendhist,dendbins,desize
+
+;Measured Physical components ACE
+vmagahist = histogram(avmag,binsize=20,location=vmagabins,min=-1000,max=1000)
+format_hist,vmagahist,vmagabins,vxsize
+tahist = histogram(at,binsize=thsize,location=tabins,min=-1000,max=1000)
+format_hist,tahist,tabins,thsize
+denahist = histogram(aden,binsize=desize,location=denabins,min=-1000,max=1000)
+format_hist,denahist,denabins,desize
+
+;plot measured velocity components
+;plot measured velocity components
+yrange2 = [0.,25.]
+plot,vmagdbins,vmagdhist,psym=10, /NOERASE,$
+    xtitle='Vmag [km/s]',ytitle='Occurence [%]',position=plot4,$
+    xrange=[200.,800.],yrange=yrange2,ystyle=1
+    oplot,vmagabins,vmagahist,psym=10,color=200
+
+plot,tdbins,tdhist,psym=10, /NOERASE, $
+    xtitle='Th. Speed [km/s]',ytitle='Occurence [%]',position=plot5,$
+    xrange=[0.,100.],yrange=yrange2,ystyle=1
+    oplot,tabins,tahist,psym=10,color=200
+
+plot,dendbins,dendhist,psym=10, /NOERASE, $
+    xtitle='Den. [cm^-3]',ytitle='Occurence [%]',position=plot6,$
+    xrange=[0,20.],yrange=yrange2,ystyle=1
+    oplot,denabins,denahist,psym=10,color=200
+
+write_png,'../compare_plots/compare_phys_grid.png',tvrd(/true)
 end
