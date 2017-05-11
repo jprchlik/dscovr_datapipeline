@@ -79,6 +79,7 @@ outpath = outpath+"/"
 if keyword_set(outfmt) then outfmt = outfmt else outfmt = '("dsc.plsmag.",I4,"_",I03,".000.idl")'
 
 
+
 ;GET JULDAY FROM DOY AND YEAR
 
 obs_day = double(JULDAY(1,1,year,0,0,0))
