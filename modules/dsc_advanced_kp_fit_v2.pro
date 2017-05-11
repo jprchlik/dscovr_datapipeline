@@ -199,6 +199,122 @@ for i = 2, n_tags(dat) - 2 do dat.(i).uncertainty[invalid] = dat.(i).fillval
 
 end
 
+;-------------------------------------------------
+;
+;USAGE
+;running_med,x,y,npix=npix
+;
+;COMMENTS
+;    Computes a running pixel median (default = 1, i.e. +/- 1 totaling 3 pixels)
+;    
+;-------------------------------------------------
+pro running_med,y,medar,dmeda,npix=npix
+
+if keyword_set(npix) then npix=npix  else npix=1   
+
+sizer = n_elements(y)
+medar = fltarr(sizer)
+
+
+for i=npix,sizer-npix-1 do begin
+    medar[i] = median(y[i-npix:i+npix])
+endfor
+
+;correct for day ends
+medar[0:npix-1] = medar[npix]
+medar[sizer-npix:sizer-1] = medar[sizer-npix-1]
+
+;find the difference between the median array and the measured value
+dmeda = (y-medar)/medar
+dmeda = y-medar
+
+
+end
+
+;--------------------------------------------------
+;
+;USAGE
+;replace = sig_replace,x,y,npix=npix,sigcut=sigcut,tol=tol
+;
+;COMMENTS
+;Sends replacement array for values which signficantly differ from the running median
+;--------------------------------------------------
+function sig_replace,y,medar=medar,dmeda=dmeda,npix=npix,sigcut=sigcut,tol=tol
+if keyword_set(npix) then npix = npix else npix = 1
+if keyword_set(sigcut) then sigcut=sigcut else sigcut = 200.00;0.75
+if keyword_set(tol) then tol = tol else tol=1 ; number of "bad" values allowed in a row
+
+
+running_med,y,medar,dmeda,npix=npix
+
+
+
+;Find values more than the sigcut number of sigma away
+use = where((y gt -9990))
+if n_elements(size(use)) lt 4 then return,-9999.0 ; end if no good spectrum data exists for day
+;Tried difference sigma estimates; however none worked well so I am using a base 100km/s rejection
+;sigmed = stddev(dmeda[use],/nan);/sqrt(n_elements(use))
+sigmed = abs(dmeda[use]-median(dmeda[use]))
+sigmed = median(sigmed)
+replace = where((abs(dmeda) gt 100.) and (y gt -9990))
+
+;plot,abs(dmeda)/sigmed,yrange=[0,550],ystyle=1,psym=6
+;wait,20
+
+;Check replace for any neighbor bad pixels if true assumed the "bad" assumption is false
+;report only uniq values in rebad (replace bad array)
+case 1 of
+    ((n_elements(size(replace)) gt 3) and (n_elements(replace) ge 2)):begin
+        check1 = replace[1:n_elements(replace)-1]-replace[0:n_elements(replace)-2]
+        rebad1 = where(check1 gt 1,crebad1)
+        if crebad1 gt 0 then begin 
+            rebad1 = [rebad1,rebad1+1]
+            srebad1= sort(rebad1)
+            rebad1 = rebad1[srebad1]
+            urebad1= uniq(rebad1)
+            rebad  = rebad1[urebad1]
+        endif
+       
+        if n_elements(replace) gt 2 then begin
+            check2 = replace[2:n_elements(replace)-1]-replace[0:n_elements(replace)-3]
+            rebad2 = where(check2 gt 2,crebad2)
+
+            case 1 of 
+                ((crebad1 gt 0) and (crebad2 gt 0)): begin
+                    rebad2 = [rebad2,rebad2+2]
+                    srebad2= sort(rebad2)
+                    rebad2 = rebad2[srebad2]
+                    urebad2= uniq(rebad2)
+                    rebad2 = rebad2[urebad2]
+                    rebad  = [rebad,rebad2]
+                    srebad = sort(rebad)
+                    rebad  = rebad[srebad]
+                    urebad = uniq(rebad)
+                    rebad  = rebad[urebad]
+                end
+                ((crebad1 eq 0) and (crebad2 gt 0)): begin
+                    rebad2 = [rebad2,rebad2+2]
+                    srebad2= sort(rebad2)
+                    rebad2 = rebad2[srebad2]
+                    urebad2= uniq(rebad2)
+                    rebad2 = rebad2[urebad2]
+                    rebad  = rebad2
+                end
+                ((crebad1 gt 0) and (crebad2 eq 0)): rebad = rebad
+              
+            endcase
+        endif 
+ 
+
+        ;return the lonely bad points
+        if n_elements(rebad) gt 3 then replace = replace[rebad] else replace = -9999
+    end 
+    (n_elements(replace) eq 1): replace = replace
+    else: replace = -9999
+endcase
+return,replace
+end
+
 
 ; ---------------------------------------------------------------------
 ;
@@ -269,6 +385,26 @@ if nfill gt 0 then begin
    uz[fill] = fillval
    duz[fill] = fillval
 endif
+
+;fill data more than sigcut sigmas from the running median (default =6)
+replace = sig_replace(ux)
+if n_elements(size(replace)) gt 3 then begin
+   u[replace] = fillval
+   w[replace] = fillval
+   n[replace] = fillval
+   T[replace] = fillval
+   du[replace] = fillval
+   dw[replace] = fillval
+   dn[replace] = fillval
+   dT[replace] = fillval
+   ux[replace] = fillval
+   dux[replace] = fillval
+   uy[replace] = fillval
+   duy[replace] = fillval
+   uz[replace] = fillval
+   duz[replace] = fillval
+endif
+
 
 ;fill = -9999.   ; come back to bad data flagging later or write a
 ;separate routine
