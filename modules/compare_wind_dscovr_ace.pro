@@ -373,8 +373,8 @@ ddwy    = dy-wy
 ddwz    = dz-wz
 ddwbmag = dbmag-wbmag
 ddwvmag = dvmag-wvmag
-ddwt    = dt-wt
-ddwden  = dden-wden
+ddwt    = 100.*(dt-wt)/wt
+ddwden  = 100.*(dden-wden)/wden
 
 ;Differences in parameters ace-wind
 daibx   = abx-ibx
@@ -388,8 +388,8 @@ daiy    = ay-iy
 daiz    = az-iz
 daibmag = abmag-ibmag
 daivmag = avmag-ivmag
-dait    = at-it
-daiden  = aden-iden
+dait    = 100.*(at-it)/it
+daiden  = 100.*(aden-iden)/iden
 
 
 ;standard deviation in dscovr-wind
@@ -593,14 +593,14 @@ plot,vmagdwbins,vmagdwhist,psym=10,/NOERASE, $
     xyouts,xxylocd,yxyloca,strsigdaivmag,charsize=1.5,charthick=2.5,color=200
 
 plot,tdwbins,tdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Th. Speed (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot5, $
+    xtitle=delta+'Th. Speed (X-WIND)/(WIND)',ytitle='Occurence [%]',position=plot5, $
     xrange=[-50,50],yrange=vyrange
     oplot,taibins,taihist,psym=10,color=200
     xyouts,-55,yxylocd,strsigddwt,charsize=1.5,charthick=2.5
     xyouts,-55,yxyloca,strsigdait,charsize=1.5,charthick=2.5,color=200
 
 plot,dendwbins,dendwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Den. (X-WIND) [cm^-3]',ytitle='Occurence [%]',position=plot6, $
+    xtitle=delta+'Den. (X-WIND)/(WIND)',ytitle='Occurence [%]',position=plot6, $
     xrange=[-5,5],yrange=vyrange
     oplot,denaibins,denaihist,psym=10,color=200
     xyouts,-5.2,yxylocd,strsigddwden,charsize=1.5,charthick=2.5
@@ -621,17 +621,22 @@ plot,vxdwbins,alog10(vxdwhist),psym=10, $
     xtitle=delta+'Vx (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot1, $
     xrange=vxrange*5,yrange=lvyrange
     oplot,vxaibins,alog10(vxaihist),psym=10,color=200
-    oplot,sigddwvx,yrange,psym=10
+    oplot, sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,-sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
 
 plot,vydwbins,alog10(vydwhist),psym=10,/NOERASE, $
     xtitle=delta+'Vy (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot2, $
     xrange=vxrange*3,yrange=lvyrange
     oplot,vyaibins,alog10(vyaihist),psym=10,color=200
+    oplot, sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,-sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
 
 plot,vzdwbins,alog10(vzdwhist),psym=10,/NOERASE, $
     xtitle=delta+'Vz (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot3, $
     xrange=vxrange*3,yrange=lvyrange
     oplot,vzaibins,alog10(vzaihist),psym=10,color=200
+    oplot, sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,-sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
 
 
 ;plot measured velocity components
@@ -639,16 +644,22 @@ plot,vmagdwbins,alog10(vmagdwhist),psym=10,/NOERASE, $
     xtitle=delta+'Speed (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot4, $
     xrange=vxrange*5,yrange=lvyrange
     oplot,vmagaibins,alog10(vmagaihist),psym=10,color=200
+    oplot, sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,-sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
 
 plot,tdwbins,alog10(tdwhist),psym=10,/NOERASE, $
-    xtitle=delta+'Th. Speed (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot5, $
-    xrange=[-50,50]*3,yrange=lvyrange
+    xtitle=delta+'Th. Speed (X-WIND)/(WIND) [%]',ytitle='log(Occurence) [log(%)]',position=plot5, $
+    xrange=[-50,50]*6,yrange=lvyrange
     oplot,taibins,alog10(taihist),psym=10,color=200
+    oplot, sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,-sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
 
 plot,dendwbins,alog10(dendwhist),psym=10,/NOERASE, $
-    xtitle=delta+'Den. (X-WIND) [cm^-3]',ytitle='log(Occurence) [log(%)]',position=plot6, $
-    xrange=[-5,5]*10,yrange=lvyrange
+    xtitle=delta+'Den. (X-WIND)/(WIND) [%]',ytitle='log(Occurence) [log(%)]',position=plot6, $
+    xrange=[-2,6]*100,yrange=lvyrange,xstyle=1
     oplot,denaibins,alog10(denaihist),psym=10,color=200
+    oplot, sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,-sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
 
 write_png,'../compare_plots/compare_grid_log.png',tvrd(/true)
 
