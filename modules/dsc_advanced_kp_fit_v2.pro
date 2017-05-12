@@ -301,6 +301,7 @@ case 1 of
                     rebad  = rebad2
                 end
                 ((crebad1 gt 0) and (crebad2 eq 0)): rebad = rebad
+                ((crebad1 eq 0) and (crebad2 eq 0)): rebad = -9999
               
             endcase
         endif 
