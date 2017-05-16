@@ -202,7 +202,7 @@ end
 ;-------------------------------------------------
 ;
 ;USAGE
-;running_med,x,y,npix=npix
+;running_med,x,y,medar,dmeda,npix=npix
 ;
 ;COMMENTS
 ;    Computes a running pixel median (default = 1, i.e. +/- 1 totaling 3 pixels)
@@ -225,7 +225,6 @@ medar[0:npix-1] = medar[npix]
 medar[sizer-npix:sizer-1] = medar[sizer-npix-1]
 
 ;find the difference between the median array and the measured value
-dmeda = (y-medar)/medar
 dmeda = y-medar
 
 
