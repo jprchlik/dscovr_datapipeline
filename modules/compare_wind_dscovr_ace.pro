@@ -132,6 +132,65 @@ hist = 100*hist/float(total(hist))
 bins = [bins[0]-bsize,bins,bins[n_elements(bins)-1]+bsize]
 end
 
+
+
+;----------------------------------------------------------------------------------------
+;USAGE
+;running_med,x,y,medx,medy,bins=bins,sig=sig
+;----------------------------------------------------------------------------------------
+pro running_med,x,y,medx,medy,bins=bins,sig=sig
+if keyword_set(bins) then bins=bins else bins = 10
+
+;Find the number of bins to create the running median
+maxx = max(x)
+minx = 0.
+ranx = maxx-minx
+binx = ranx/bins
+numx = fix(binx)+1
+
+;Create arrays which will contain the median values
+medy = fltarr(numx)
+medx = fltarr(numx)
+sig  = fltarr(numx)
+
+;loop over all bin values
+for i=0,numx-1 do begin
+    medx[i] = float(i)*float(bins)+float(bins)/2.
+    good_val = where((x ge float(i)*float(bins)) and (x lt float(i+1.)*float(bins)),count)
+    if count gt 0 then begin
+        medy[i] = median(y[good_val])
+        sig [i] = stddev(y[good_val]);/float(n_elements(good_val))
+    endif else begin
+        medy[i] = -9999.0
+        sig [i] = -9999.0
+    endelse
+endfor
+end
+
+;--------------------------------------------------
+;USAGE
+;    error_bars,xval,yval,err,p_err_x,p_err_y
+;
+;COMMENTS
+;    creates error bars for plots 
+;    Allow the syntax claims only Y errors you can flop x and y to plot x errors
+;--------------------------------------------------
+pro error_bars,xvals,yvals,svals,ecol=ecol
+if keyword_set(ecol) then ecol=ecol else ecol=200
+for i=0,n_elements(xvals)-1 do begin
+    xval = xvals[i]
+    yval = yvals[i]
+    sval = svals[i]
+    ex = [xval,xval]
+    ey = [abs(sval),-abs(sval)]+yval
+    if yval gt -9998. then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+endfor
+end
+
+
+;----------------------------------------------------------------------------------------
+;MAIN LOOP
+;----------------------------------------------------------------------------------------
 pro compare_wind_dscovr_ace,syear,sdoy,edoy=edoy,aceoff=aceoff,eyear=eyear
 
 if keyword_set(aceoff) then aceoff=aceoff else aceoff = 11. ;offset for ace data in years
@@ -505,7 +564,7 @@ delta = '!4'+string(dlet)+'!X'
 vxsize = 10
 vysize = 10
 vzsize = 10
-desize = 0.5
+desize = 5
 thsize = 5
 vxrange = [-100,100]
 vyrange = [0,55]
@@ -593,18 +652,18 @@ plot,vmagdwbins,vmagdwhist,psym=10,/NOERASE, $
     xyouts,xxylocd,yxyloca,strsigdaivmag,charsize=1.5,charthick=2.5,color=200
 
 plot,tdwbins,tdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Th. Speed (X-WIND)/(WIND)',ytitle='Occurence [%]',position=plot5, $
+    xtitle=delta+'Th. Speed (X-WIND)/(WIND) [%]',ytitle='Occurence [%]',position=plot5, $
     xrange=[-50,50],yrange=vyrange
     oplot,taibins,taihist,psym=10,color=200
     xyouts,-55,yxylocd,strsigddwt,charsize=1.5,charthick=2.5
     xyouts,-55,yxyloca,strsigdait,charsize=1.5,charthick=2.5,color=200
 
 plot,dendwbins,dendwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Den. (X-WIND)/(WIND)',ytitle='Occurence [%]',position=plot6, $
-    xrange=[-5,5],yrange=vyrange
+    xtitle=delta+'Den. (X-WIND)/(WIND) [%]',ytitle='Occurence [%]',position=plot6, $
+    xrange=[-50,50],yrange=vyrange
     oplot,denaibins,denaihist,psym=10,color=200
-    xyouts,-5.2,yxylocd,strsigddwden,charsize=1.5,charthick=2.5
-    xyouts,-5.2,yxyloca,strsigdaiden,charsize=1.5,charthick=2.5,color=200
+    xyouts,-55.,yxylocd,strsigddwden,charsize=1.5,charthick=2.5
+    xyouts,-55.,yxyloca,strsigdaiden,charsize=1.5,charthick=2.5,color=200
 
 write_png,'../compare_plots/compare_grid.png',tvrd(/true)
 
@@ -649,7 +708,7 @@ plot,vmagdwbins,alog10(vmagdwhist),psym=10,/NOERASE, $
 
 plot,tdwbins,alog10(tdwhist),psym=10,/NOERASE, $
     xtitle=delta+'Th. Speed (X-WIND)/(WIND) [%]',ytitle='log(Occurence) [log(%)]',position=plot5, $
-    xrange=[-50,50]*6,yrange=lvyrange
+    xrange=[-200,600],yrange=lvyrange
     oplot,taibins,alog10(taihist),psym=10,color=200
     oplot, sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
@@ -735,4 +794,127 @@ plot,dendbins,dendhist,psym=10, /NOERASE, $
     oplot,denabins,denahist,psym=10,color=200
 
 write_png,'../compare_plots/compare_phys_grid.png',tvrd(/true)
+
+
+;----------------------------------------------------------------------------
+;Find  dT/T as a function of V,den,temp to try and remove Th. speed tail
+;----------------------------------------------------------------------------
+p1 = [.1,.1,.33,.8]
+p2 = [.38,.1,.61,.8]
+p3 = [.66,.1,.9,.8]
+;calc running medians
+running_med,dvmag,ddwt,medxdvmag,medydvmag,sig=sigmdvmag,bins=20.
+running_med,dt,ddwt,medxdt,medydt,sig=sigmdt,bins=5.
+running_med,dden,ddwt,medxdden,medydden,sig=sigmdden,bins=1.5
+
+;Create 2D histograms
+dvmag_hist = HIST_2D(dvmag,ddwt,bin1=40.,bin2=1,min1=200.,max1=1000.,min2=-100.,max2=150.)
+dt_hist = HIST_2D(dt,ddwt,bin1=10.,bin2=1,min1=0.,max1=200.,min2=-100.,max2=150.)
+dden_hist = HIST_2D(dden,ddwt,bin1=3,bin2=1,min1=0.,max1=50.,min2=-100.,max2=150.)
+
+;take the log number
+dvmag_hist = alog10(dvmag_hist)
+dt_hist = alog10(dt_hist)
+dden_hist = alog10(dden_hist)
+
+;replace bad with min.
+dvmag_hist[where(finite(dvmag_hist) eq 0)] = min(dvmag_hist,/nan)
+dt_hist[where(finite(dt_hist) eq 0)] = min(dt_hist,/nan)
+dden_hist[where(finite(dden_hist) eq 0)] = min(dden_hist,/nan)
+
+minv = min(dt_hist)
+maxv = max(dt_hist)
+
+;Plot 2d histograms with medians overplotted
+cgimage,dvmag_hist ,position=p1,xrange=[200,1000],yrange=[-100.,150.],maxval=maxv,minval=minv
+plot,dvmag,ddwt,psym=6,/NODATA,/NOERASE, $
+    xtitle="Wind Speed [km/s]",ytitle=delta+"Th. Speed (DSCVOR-WIND)/WIND [%]", position=p1, $
+    xrange=[200,1000],yrange=[-100.,150.],xstyle=1,ystyle=1
+    oplot,medxdvmag,medydvmag,color=255,psym=7,symsize=1.3
+    oplot,medxdvmag,medydvmag,color=0,psym=7
+    error_bars,medxdvmag,medydvmag,sigmdvmag
+
+cgimage,dt_hist ,position=p2,xrange=[0.,200.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
+plot,dt,ddwt,psym=6, /NOERASE, /NODATA, $
+    xtitle="Th. Speed [km/s]", position=p2, $
+    xrange=[0.,200.],yrange=[-100.,150.],xstyle=1,ystyle=1
+    oplot,medxdt,medydt,color=255,psym=7,symsize=1.3
+    oplot,medxdt,medydt,color=0,psym=7
+    error_bars,medxdt,medydt,sigmdt
+
+cgimage,dden_hist ,position=p3,xrange=[0.,50.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
+plot,dden,ddwt,psym=6, /NOERASE, /NODATA, $
+    xtitle="Density [cm^-3]", position=p3, $
+    xrange=[0.,50.],yrange=[-100.,150.],xstyle=1,ystyle=1
+    oplot,medxdden,medydden,color=255,psym=7,symsize=1.3
+    oplot,medxdden,medydden,color=0,psym=7
+    error_bars,medxdden,medydden,sigmdden
+
+cgColorbar,position=[.93,.1,.99,.9],title='log(Number)',textthick=3,charsize=2.0,range=[minv,maxv]
+
+
+write_png,'../compare_plots/reg_th_speed_on_X.png',tvrd(/true)
+
+
+;----------------------------------------------------------------------------
+;Find  dT as a function of V,den,temp to try and remove Th. speed tail
+;----------------------------------------------------------------------------
+;change back to total value
+ddwt = dt*ddwt/100.
+;calc running medians
+running_med,dvmag,ddwt,medxdvmag,medydvmag,sig=sigmdvmag,bins=20.
+running_med,dt,ddwt,medxdt,medydt,sig=sigmdt,bins=5.
+running_med,dden,ddwt,medxdden,medydden,sig=sigmdden,bins=1.5
+
+;Create 2D histograms
+dvmag_hist = HIST_2D(dvmag,ddwt,bin1=40.,bin2=1,min1=200.,max1=1000.,min2=-100.,max2=150.)
+dt_hist = HIST_2D(dt,ddwt,bin1=10.,bin2=1,min1=0.,max1=200.,min2=-100.,max2=150.)
+dden_hist = HIST_2D(dden,ddwt,bin1=3,bin2=1,min1=0.,max1=50.,min2=-100.,max2=150.)
+
+;take the log number
+dvmag_hist = alog10(dvmag_hist)
+dt_hist = alog10(dt_hist)
+dden_hist = alog10(dden_hist)
+
+;replace bad with min.
+dvmag_hist[where(finite(dvmag_hist) eq 0)] = min(dvmag_hist,/nan)
+dt_hist[where(finite(dt_hist) eq 0)] = min(dt_hist,/nan)
+dden_hist[where(finite(dden_hist) eq 0)] = min(dden_hist,/nan)
+
+minv = min(dt_hist)
+maxv = max(dt_hist)
+
+;Plot 2d histograms with medians overplotted
+cgimage,dvmag_hist ,position=p1,xrange=[200,1000],yrange=[-100.,150.],maxval=maxv,minval=minv
+plot,dvmag,ddwt,psym=6,/NODATA,/NOERASE, $
+    xtitle="Wind Speed [km/s]",ytitle=delta+"Th. Speed (DSCVOR-WIND) [km/s]", position=p1, $
+    xrange=[200,1000],yrange=[-100.,150.],xstyle=1,ystyle=1
+    oplot,medxdvmag,medydvmag,color=255,psym=7,symsize=1.3
+    oplot,medxdvmag,medydvmag,color=0,psym=7
+    error_bars,medxdvmag,medydvmag,sigmdvmag
+
+cgimage,dt_hist ,position=p2,xrange=[0.,200.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
+plot,dt,ddwt,psym=6, /NOERASE, /NODATA, $
+    xtitle="Th. Speed [km/s]", position=p2, $
+    xrange=[0.,200.],yrange=[-100.,150.],xstyle=1,ystyle=1
+    oplot,medxdt,medydt,color=255,psym=7,symsize=1.3
+    oplot,medxdt,medydt,color=0,psym=7
+    error_bars,medxdt,medydt,sigmdt
+
+cgimage,dden_hist ,position=p3,xrange=[0.,50.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
+plot,dden,ddwt,psym=6, /NOERASE, /NODATA, $
+    xtitle="Density [cm^-3]", position=p3, $
+    xrange=[0.,50.],yrange=[-100.,150.],xstyle=1,ystyle=1
+    oplot,medxdden,medydden,color=255,psym=7,symsize=1.3
+    oplot,medxdden,medydden,color=0,psym=7
+    error_bars,medxdden,medydden,sigmdden
+
+cgColorbar,position=[.93,.1,.99,.9],title='log(Number)',textthick=3,charsize=2.0,range=[minv,maxv]
+
+
+write_png,'../compare_plots/reg_abs_th_speed_on_X.png',tvrd(/true)
+
+
+
+
 end
