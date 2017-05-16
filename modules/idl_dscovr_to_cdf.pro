@@ -18,6 +18,63 @@
 ;Added keyword to output cdf in dom format
 ;--------------------------------------------------
 
+;-------------------------------------------------
+;
+;USAGE
+;running_med,x,y,medar,dmeda,npix=npix
+;
+;COMMENTS
+;    Computes a running pixel median (default = 1, i.e. +/- 1 totaling 3 pixels)
+;    
+;-------------------------------------------------
+pro running_med,y,medar,dmeda,npix=npix
+
+if keyword_set(npix) then npix=npix  else npix=1   
+
+sizer = n_elements(y)
+medar = fltarr(sizer)
+
+
+for i=npix,sizer-npix-1 do begin
+    medvl = y[i-npix:i+npix]
+    use = where(medvl gt -9990.,cnt)
+    case 1 of
+        (if cnt gt 1): medar[i] = median(medvl[use]) ;find median of neighboring points
+        (if cnt eq 1): medar[i] = medvl[use];if only 1 good point assume it is the median
+        (if cnt eq 0): medar[i] = medvl[1] ;if they are all fill put the median as the fill val
+    endcase
+endfor
+
+;correct for day ends
+medar[0:npix-1] = medar[npix]
+medar[sizer-npix:sizer-1] = medar[sizer-npix-1]
+
+;find the difference between the median array and the measured value
+dmeda = y-medar
+
+end
+
+;--------------------------------------------------
+;
+;USAGE
+;replace = sig_flag,y,yerr,npix=npix,sigcut=sigcut,tol=tol
+;
+;COMMENTS
+;Sends flag for values which signficantly differ from the running median
+;--------------------------------------------------
+function sig_flag,y,yerr,medar=medar,dmeda=dmeda,npix=npix,sigcut=sigcut
+if keyword_set(npix) then npix = npix else npix = 1
+if keyword_set(sigcut) then sigcut=sigcut else sigcut = 20.00;0.75
+
+running_med,y,yerr,medar,dmeda,npix=npix
+
+
+;find points sigcut away from the median
+offset = abs(y-medar)/yerr
+higsig = where(offset gt sigcut,cnt)
+
+return,higsig
+end
 
 
 ;--------------------------------------------------
@@ -290,6 +347,11 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
 
 ;set bad dqf_val where bad points exist
 if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
+
+;check for Vx values 20 sigma away from the median
+user_check = sig_flag(y,yerr)
+if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 2
+
 
 ;fix for solar wind's aberration in Y component
 ;solab = 29.78 ;km/s
