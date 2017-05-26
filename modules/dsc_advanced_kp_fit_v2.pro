@@ -215,10 +215,37 @@ if keyword_set(npix) then npix=npix  else npix=1
 sizer = n_elements(y)
 medar = fltarr(sizer)
 
+;good values to pull median from
+find_val = where(y gt -9990.)
+good_val = y[find_val]
 
 for i=npix,sizer-npix-1 do begin
-    medar[i] = median(y[i-npix:i+npix])
+;get index in good_val to find median
+    j = where(find_val eq i,gcnt)
+;if value is already filled don't give user check flag
+    if gcnt eq 0 then begin 
+        medar[i] = y[i]
+        continue
+    endif
+;get the median value near pixel
+    ind_min = fix(j)-npix
+    ind_max = fix(j)+npix
+;prevent overreaching in array 
+    while ind_max gt n_elements(good_val)-1 do ind_max = ind_max-1
+;prevent under 0 in array 
+    while ind_min lt 0 do ind_min = ind_min+1
+
+    medvl = good_val[ind_min:ind_max]
+;Count the number of acceptable pixels and where they are located to apply to case
+    use = where(medvl gt -9990.,cnt)
+    case 1 of
+        (cnt gt 1): medar[i] = median(medvl[use]) ;find median of neighboring points
+        (cnt eq 1): medar[i] = medvl[use];if only 1 good point assume it is the median
+        (cnt eq 0): medar[i] = medvl[1] ;if they are all fill put the median as the fill val
+    endcase
 endfor
+
+
 
 ;correct for day ends
 medar[0:npix-1] = medar[npix]
