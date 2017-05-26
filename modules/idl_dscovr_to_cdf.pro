@@ -235,7 +235,7 @@ archive = archive+'/'
 if keyword_set(orchive) then orchive=orchive else orchive='/crater/observatories/dscovr/plasmag/l2/cdf/public_kp/1minute_corrected';set output cdf location
 orchive = orchive+'/'
 
-if keyword_set(skeleton) then skeleton=skeleton else skeleton='../skeleton/dscovr_h1_plasmag_0000000_v01.cdf';read the default cdf skeleton if none supplied
+if keyword_set(skeleton) then skeleton=skeleton else skeleton='../skeleton/dscovr_h1_fc_0000000_v01.cdf';read the default cdf skeleton if none supplied
 
 if keyword_set(filefmt) then filefmt=filefmt else filefmt='("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl")' ;default file format is for 1 minute cadence data
 
@@ -316,14 +316,14 @@ utemp= root.T.uncertainty
 
 
 ;data quailty flag
-dqf_val = intarr(n_elements(temp)) ;good by default
+dqf_val = intarr(2,n_elements(temp))+1 ;good by default
 
 ;set up variables
 num_rec = n_elements(obsepoch)
 if keyword_set(outdom) then epoch = strarr(num_rec) else epoch = double(num_rec) ; Prchlik J. add keyword to output Epoch in dom format
 epoch_old = double(num_rec)
 time_pb5 = L64INDGEN(3,num_rec)
-dqf = uint(num_rec)
+dqf = intarr(2,num_rec)
 v_gse = fltarr(3,num_rec)
 v_gse_delta = fltarr(3,num_rec)
 thermal_spd = float(num_rec)
@@ -365,11 +365,11 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
            )
 
 ;set bad dqf_val where bad points exist
-if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
+if n_elements(size(badv)) gt 3 then dqf_val[0,badv] = 0
 
 ;check for Vx values 20 sigma away from the median
 user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
-if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 2
+if n_elements(size(user_check)) gt 3 then dqf_val[1,user_check] = 0
 
 
 ;fix for solar wind's aberration in Y component
@@ -383,7 +383,8 @@ if keyword_set(outdom) then epoch=mepoch else epoch = obsepoch ; Prchlik J. 2017
 time_pb5(0,*) = pb5t[0,*]
 time_pb5(1,*) = pb5t[1,*]
 time_pb5(2,*) = pb5t[2,*]
-dqf = dqf_val
+dqf(0,*) = dqf_val[0,*]
+dqf(1,*) = dqf_val[1,*]
 v_gse(0,*) = vgse[0,*]
 v_gse(1,*) = vgse[1,*]
 v_gse(2,*) = vgse[2,*]
