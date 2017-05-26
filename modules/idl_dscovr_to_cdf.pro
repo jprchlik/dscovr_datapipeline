@@ -34,14 +34,33 @@ if keyword_set(npix) then npix=npix  else npix=1
 sizer = n_elements(y)
 medar = fltarr(sizer)
 
+;good values to pull median from
+find_val = where(y gt -9990.)
+good_val = y[find_val]
 
 for i=npix,sizer-npix-1 do begin
-    medvl = y[i-npix:i+npix]
+;get index in good_val to find median
+    j = where(find_val eq i,gcnt)
+;if value is already filled don't give user check flag
+    if gcnt eq 0 then begin 
+        medar[i] = y[i]
+        continue
+    endif
+;get the median value near pixel
+    ind_min = fix(j)-npix
+    ind_max = fix(j)+npix
+;prevent overreaching in array 
+    while ind_max gt n_elements(good_val)-1 do ind_max = ind_max-1
+;prevent under 0 in array 
+    while ind_min lt 0 do ind_min = ind_min+1
+
+    medvl = good_val[ind_min:ind_max]
+;Count the number of acceptable pixels and where they are located to apply to case
     use = where(medvl gt -9990.,cnt)
     case 1 of
-        (if cnt gt 1): medar[i] = median(medvl[use]) ;find median of neighboring points
-        (if cnt eq 1): medar[i] = medvl[use];if only 1 good point assume it is the median
-        (if cnt eq 0): medar[i] = medvl[1] ;if they are all fill put the median as the fill val
+        (cnt gt 1): medar[i] = median(medvl[use]) ;find median of neighboring points
+        (cnt eq 1): medar[i] = medvl[use];if only 1 good point assume it is the median
+        (cnt eq 0): medar[i] = medvl[1] ;if they are all fill put the median as the fill val
     endcase
 endfor
 
@@ -66,12 +85,12 @@ function sig_flag,y,yerr,medar=medar,dmeda=dmeda,npix=npix,sigcut=sigcut
 if keyword_set(npix) then npix = npix else npix = 1
 if keyword_set(sigcut) then sigcut=sigcut else sigcut = 20.00;0.75
 
-running_med,y,yerr,medar,dmeda,npix=npix
+running_med,y,medar,dmeda,npix=npix
 
 
 ;find points sigcut away from the median
 offset = abs(y-medar)/yerr
-higsig = where(offset gt sigcut,cnt)
+higsig = where((offset gt sigcut) and (abs(y-medar) gt 100),cnt)
 
 return,higsig
 end
@@ -349,7 +368,7 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
 if n_elements(size(badv)) gt 3 then dqf_val[badv] = 1
 
 ;check for Vx values 20 sigma away from the median
-user_check = sig_flag(y,yerr)
+user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 2
 
 
