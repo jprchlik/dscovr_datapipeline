@@ -32,6 +32,42 @@ p_err_y = [abs(err),-abs(err)]+yval
 
 end
 
+;-------------------------------------------------
+;
+;USAGE
+;running_med,x,y,medar,dmeda,npix=npix
+;
+;COMMENTS
+;    Computes a running pixel median (default = 1, i.e. +/- 1 totaling 3 pixels)
+;    
+;-------------------------------------------------
+pro running_med,y,medar,dmeda,npix=npix
+
+if keyword_set(npix) then npix=npix  else npix=1   
+
+sizer = n_elements(y)
+medar = fltarr(sizer)
+
+
+for i=npix,sizer-npix-1 do begin
+    medvl = y[i-npix:i+npix]
+    use = where(medvl gt -9990.,cnt)
+    case 1 of
+        (cnt gt 1): medar[i] = median(medvl[use]) ;find median of neighboring points
+        (cnt eq 1): medar[i] = medvl[use];if only 1 good point assume it is the median
+        (cnt eq 0): medar[i] = medvl[1] ;if they are all fill put the median as the fill val
+    endcase
+endfor
+
+;correct for day ends
+medar[0:npix-1] = medar[npix]
+medar[sizer-npix:sizer-1] = medar[sizer-npix-1]
+
+;find the difference between the median array and the measured value
+dmeda = y-medar
+
+end
+
 
 ;--------------------------------------------------
 ;USAGE
@@ -97,8 +133,8 @@ if n_elements(size(chim)) gt 3 then begin ;move the time as little as possible
 endif else begin 
     dtime = 0. ; return 0 if no min??
 endelse
-print,'Chi^2 min value',strcompress(min(fcvals),/remove_all)
-print,'Chi^2 time offset',strcompress(dtime*24.*60.),'min'
+;print,'Chi^2 min value',strcompress(min(fcvals),/remove_all)
+;print,'Chi^2 time offset',strcompress(dtime*24.*60.),'min'
 
 
 return,dtime
@@ -183,6 +219,8 @@ dew = 1.E-3*sqrt(2.*kb/mp*root.THERMAL_TEMP.dat)
 ddew= 1.E-3*sqrt(2.*kb/mp/root.THERMAL_TEMP.dat)*root.THERMAL_TEMP_DELTA.dat*0.5
 ;ddew=0.5*(root.THERMAL_TEMP_DELTA.dat/root.THERMAL_TEMP.dat) errbar sanity check
 
+;data quality flag
+dqf = root.dqf.dat
 
 ;============================================================
 ; Set up plots Section 1.2
@@ -276,14 +314,19 @@ oplot,jddoy,dew,psym=8,color=dcol
 
 
 ;Plot Vx
+ui = where(dqf eq 2,uicnt)
 plot,jwdoy,wx,psym=6,color=0,ytitle='Vx [km/s]',/nodata,background=255,charsize=2,$
      font=1,charthick=3,position=plot3,/NOERASE,xtickformat="(A1)"
+;plot runnint median
+running_med,dx,medar,dmeda,npix=2
+oplot,jddoy,medar,psym=10,color=120,linestyle=0,thick=.2
 for i=0,n_elements(jddoy)-1 do begin
     error_bars,jddoy[i],dx[i],ddx[i],ex,ey
     if dx[i] gt -9998. then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
 endfor
 oplot,jwdoy,wx,psym=6,color=wcol
 oplot,jddoy,dx,psym=8,color=dcol
+if uicnt gt 0 then oplot,jddoy[ui],dx[ui],psym=8,color=100,s=2.0
 ;oplot,adoy,ax,psym=5,color=acol
 
 ;Plot Vy
@@ -433,6 +476,7 @@ for i=0,n_elements(ddoy)-1 do begin
     if ddx[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
 endfor
 oplot,ddoy,dwdx,psym=8,color=dcol
+if uicnt gt 0 then oplot,ddoy[ui],dwdx[ui],psym=8,color=100,s=2.0
 if ace eq 1 then oplot,adoy,dwax,psym=5,color=acol
 
 ;plot outliers in red
