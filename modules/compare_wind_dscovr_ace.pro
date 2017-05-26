@@ -159,7 +159,7 @@ for i=0,numx-1 do begin
     good_val = where((x ge float(i)*float(bins)) and (x lt float(i+1.)*float(bins)),count)
     if count gt 0 then begin
         medy[i] = median(y[good_val])
-        sig [i] = stddev(y[good_val]);/float(n_elements(good_val))
+        sig [i] = stddev(y[good_val])/float(n_elements(good_val))
     endif else begin
         medy[i] = -9999.0
         sig [i] = -9999.0
@@ -803,14 +803,14 @@ p1 = [.1,.1,.33,.8]
 p2 = [.38,.1,.61,.8]
 p3 = [.66,.1,.9,.8]
 ;calc running medians
-running_med,dvmag,ddwt,medxdvmag,medydvmag,sig=sigmdvmag,bins=20.
-running_med,dt,ddwt,medxdt,medydt,sig=sigmdt,bins=5.
-running_med,dden,ddwt,medxdden,medydden,sig=sigmdden,bins=1.5
+running_med,wvmag,ddwt,medxdvmag,medydvmag,sig=sigmdvmag,bins=50.
+running_med,wt,ddwt,medxdt,medydt,sig=sigmdt,bins=10.
+running_med,wden,ddwt,medxdden,medydden,sig=sigmdden,bins=1.5
 
 ;Create 2D histograms
-dvmag_hist = HIST_2D(dvmag,ddwt,bin1=40.,bin2=1,min1=200.,max1=1000.,min2=-100.,max2=150.)
-dt_hist = HIST_2D(dt,ddwt,bin1=10.,bin2=1,min1=0.,max1=200.,min2=-100.,max2=150.)
-dden_hist = HIST_2D(dden,ddwt,bin1=3,bin2=1,min1=0.,max1=50.,min2=-100.,max2=150.)
+dvmag_hist = HIST_2D(wvmag,ddwt,bin1=50.,bin2=1,min1=200.,max1=1000.,min2=-100.,max2=150.)
+dt_hist = HIST_2D(wt,ddwt,bin1=10.,bin2=1,min1=0.,max1=200.,min2=-100.,max2=150.)
+dden_hist = HIST_2D(wden,ddwt,bin1=3,bin2=1,min1=0.,max1=50.,min2=-100.,max2=150.)
 
 ;take the log number
 dvmag_hist = alog10(dvmag_hist)
@@ -827,7 +827,7 @@ maxv = max(dt_hist)
 
 ;Plot 2d histograms with medians overplotted
 cgimage,dvmag_hist ,position=p1,xrange=[200,1000],yrange=[-100.,150.],maxval=maxv,minval=minv
-plot,dvmag,ddwt,psym=6,/NODATA,/NOERASE, $
+plot,wvmag,ddwt,psym=6,/NODATA,/NOERASE, $
     xtitle="Wind Speed [km/s]",ytitle=delta+"Th. Speed (DSCVOR-WIND)/WIND [%]", position=p1, $
     xrange=[200,1000],yrange=[-100.,150.],xstyle=1,ystyle=1
     oplot,medxdvmag,medydvmag,color=255,psym=7,symsize=1.3
@@ -835,7 +835,7 @@ plot,dvmag,ddwt,psym=6,/NODATA,/NOERASE, $
     error_bars,medxdvmag,medydvmag,sigmdvmag
 
 cgimage,dt_hist ,position=p2,xrange=[0.,200.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
-plot,dt,ddwt,psym=6, /NOERASE, /NODATA, $
+plot,wt,ddwt,psym=6, /NOERASE, /NODATA, $
     xtitle="Th. Speed [km/s]", position=p2, $
     xrange=[0.,200.],yrange=[-100.,150.],xstyle=1,ystyle=1
     oplot,medxdt,medydt,color=255,psym=7,symsize=1.3
@@ -843,7 +843,7 @@ plot,dt,ddwt,psym=6, /NOERASE, /NODATA, $
     error_bars,medxdt,medydt,sigmdt
 
 cgimage,dden_hist ,position=p3,xrange=[0.,50.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
-plot,dden,ddwt,psym=6, /NOERASE, /NODATA, $
+plot,wden,ddwt,psym=6, /NOERASE, /NODATA, $
     xtitle="Density [cm^-3]", position=p3, $
     xrange=[0.,50.],yrange=[-100.,150.],xstyle=1,ystyle=1
     oplot,medxdden,medydden,color=255,psym=7,symsize=1.3
@@ -862,14 +862,14 @@ write_png,'../compare_plots/reg_th_speed_on_X.png',tvrd(/true)
 ;change back to total value
 ddwt = dt*ddwt/100.
 ;calc running medians
-running_med,dvmag,ddwt,medxdvmag,medydvmag,sig=sigmdvmag,bins=20.
-running_med,dt,ddwt,medxdt,medydt,sig=sigmdt,bins=5.
-running_med,dden,ddwt,medxdden,medydden,sig=sigmdden,bins=1.5
+running_med,wvmag,ddwt,medxdvmag,medydvmag,sig=sigmdvmag,bins=20.
+running_med,wt,ddwt,medxdt,medydt,sig=sigmdt,bins=5.
+running_med,wden,ddwt,medxdden,medydden,sig=sigmdden,bins=1.5
 
 ;Create 2D histograms
-dvmag_hist = HIST_2D(dvmag,ddwt,bin1=40.,bin2=1,min1=200.,max1=1000.,min2=-100.,max2=150.)
-dt_hist = HIST_2D(dt,ddwt,bin1=10.,bin2=1,min1=0.,max1=200.,min2=-100.,max2=150.)
-dden_hist = HIST_2D(dden,ddwt,bin1=3,bin2=1,min1=0.,max1=50.,min2=-100.,max2=150.)
+dvmag_hist = HIST_2D(wvmag,ddwt,bin1=40.,bin2=1,min1=200.,max1=1000.,min2=-100.,max2=150.)
+dt_hist = HIST_2D(wt,ddwt,bin1=10.,bin2=1,min1=0.,max1=200.,min2=-100.,max2=150.)
+dden_hist = HIST_2D(wden,ddwt,bin1=3,bin2=1,min1=0.,max1=50.,min2=-100.,max2=150.)
 
 ;take the log number
 dvmag_hist = alog10(dvmag_hist)
@@ -886,7 +886,7 @@ maxv = max(dt_hist)
 
 ;Plot 2d histograms with medians overplotted
 cgimage,dvmag_hist ,position=p1,xrange=[200,1000],yrange=[-100.,150.],maxval=maxv,minval=minv
-plot,dvmag,ddwt,psym=6,/NODATA,/NOERASE, $
+plot,wvmag,ddwt,psym=6,/NODATA,/NOERASE, $
     xtitle="Wind Speed [km/s]",ytitle=delta+"Th. Speed (DSCVOR-WIND) [km/s]", position=p1, $
     xrange=[200,1000],yrange=[-100.,150.],xstyle=1,ystyle=1
     oplot,medxdvmag,medydvmag,color=255,psym=7,symsize=1.3
@@ -894,7 +894,7 @@ plot,dvmag,ddwt,psym=6,/NODATA,/NOERASE, $
     error_bars,medxdvmag,medydvmag,sigmdvmag
 
 cgimage,dt_hist ,position=p2,xrange=[0.,200.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
-plot,dt,ddwt,psym=6, /NOERASE, /NODATA, $
+plot,wt,ddwt,psym=6, /NOERASE, /NODATA, $
     xtitle="Th. Speed [km/s]", position=p2, $
     xrange=[0.,200.],yrange=[-100.,150.],xstyle=1,ystyle=1
     oplot,medxdt,medydt,color=255,psym=7,symsize=1.3
@@ -902,7 +902,7 @@ plot,dt,ddwt,psym=6, /NOERASE, /NODATA, $
     error_bars,medxdt,medydt,sigmdt
 
 cgimage,dden_hist ,position=p3,xrange=[0.,50.],yrange=[-100.,150.],/NOERASE,maxval=maxv,minval=minv
-plot,dden,ddwt,psym=6, /NOERASE, /NODATA, $
+plot,wden,ddwt,psym=6, /NOERASE, /NODATA, $
     xtitle="Density [cm^-3]", position=p3, $
     xrange=[0.,50.],yrange=[-100.,150.],xstyle=1,ystyle=1
     oplot,medxdden,medydden,color=255,psym=7,symsize=1.3
