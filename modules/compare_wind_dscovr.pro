@@ -314,7 +314,7 @@ oplot,jddoy,dew,psym=8,color=dcol
 
 
 ;Plot Vx
-ui = where(dqf eq 2,uicnt)
+ui = where(dqf[1,*] eq 0,uicnt)
 plot,jwdoy,wx,psym=6,color=0,ytitle='Vx [km/s]',/nodata,background=255,charsize=2,$
      font=1,charthick=3,position=plot3,/NOERASE,xtickformat="(A1)"
 ;plot runnint median
