@@ -316,7 +316,7 @@ utemp= root.T.uncertainty
 
 
 ;data quailty flag
-dqf_val = intarr(n_elements(temp))+3 ;good by default
+dqf_val = intarr(n_elements(temp));good (0) by default
 
 ;set up variables
 num_rec = n_elements(obsepoch)
@@ -365,11 +365,11 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
            )
 
 ;set bad dqf_val where bad points exist
-if n_elements(size(badv)) gt 3 then dqf_val[badv] = 0
+if n_elements(size(badv)) gt 3 then dqf_val[badv] = 2
 
 ;check for Vx values 20 sigma away from the median
 user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
-if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 2
+if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
 
 ;fix for solar wind's aberration in Y component
