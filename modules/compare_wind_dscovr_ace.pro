@@ -7,6 +7,37 @@
 ;
 ;
 ;----------------------------------------------------------------------------------------
+FUNCTION Exponent, axis, index, number
+
+  ; A special case.
+  IF number EQ 0 THEN RETURN, '0' 
+
+  ; Assuming multiples of 10 with format.
+  ex = String(number, Format='(e8.0)') 
+  pt = StrPos(ex, '.')
+
+  first = StrMid(ex, 0, pt)
+  sign = StrMid(ex, pt+2, 1)
+  thisExponent = StrMid(ex, pt+3)
+
+  ; Shave off leading zero in exponent
+  WHILE StrMid(thisExponent, 0, 1) EQ '0' DO thisExponent = StrMid(thisExponent, 1)
+
+  ; Fix for sign and missing zero problem.
+  IF (Long(thisExponent) EQ 0) THEN BEGIN
+     sign = ''
+     thisExponent = '0'
+  ENDIF
+
+  ; Make the exponent a superscript.
+  IF sign EQ '-' THEN BEGIN
+     RETURN, '10!U' + sign + thisExponent + '!N' 
+  ENDIF ELSE BEGIN             
+     RETURN, '10!U' + thisExponent + '!N'
+  ENDELSE
+  
+END
+
 
 
 ;--------------------------------------------------
@@ -452,44 +483,133 @@ daiden  = 100.*(aden-iden)/iden
 
 
 ;standard deviation in dscovr-wind
-sigddwbx   = stddev(ddwbx  )
-sigddwby   = stddev(ddwby  )
-sigddwbz   = stddev(ddwbz  )
-sigddwvx   = stddev(ddwvx  )
-sigddwvy   = stddev(ddwvy  )
-sigddwvz   = stddev(ddwvz  )
-sigddwx    = stddev(ddwx   )
-sigddwy    = stddev(ddwy   )
-sigddwz    = stddev(ddwz   )
-sigddwbmag = stddev(ddwbmag)
-sigddwvmag = stddev(ddwvmag)
-sigddwt    = stddev(ddwt   )
-sigddwden  = stddev(ddwden )
+;Cut a 99.7 percentile (3sigma)
+perarray = [0.003,0.997]
+
+;Find percentile values
+perddwbx   = cgpercentiles(ddwbx  ,percentiles=perarray)
+perddwby   = cgpercentiles(ddwby  ,percentiles=perarray)
+perddwbz   = cgpercentiles(ddwbz  ,percentiles=perarray)
+perddwvx   = cgpercentiles(ddwvx  ,percentiles=perarray)
+perddwvy   = cgpercentiles(ddwvy  ,percentiles=perarray)
+perddwvz   = cgpercentiles(ddwvz  ,percentiles=perarray)
+perddwx    = cgpercentiles(ddwx   ,percentiles=perarray)
+perddwy    = cgpercentiles(ddwy   ,percentiles=perarray)
+perddwz    = cgpercentiles(ddwz   ,percentiles=perarray)
+perddwbmag = cgpercentiles(ddwbmag,percentiles=perarray)
+perddwvmag = cgpercentiles(ddwvmag,percentiles=perarray)
+perddwt    = cgpercentiles(ddwt   ,percentiles=perarray)
+perddwden  = cgpercentiles(ddwden ,percentiles=perarray)
+
+;create array slices
+cutddwbx   = where((ddwbx   gt perddwbx   [0]) and (ddwbx   lt perddwbx   [1]))
+cutddwby   = where((ddwby   gt perddwby   [0]) and (ddwby   lt perddwby   [1]))
+cutddwbz   = where((ddwbz   gt perddwbz   [0]) and (ddwbz   lt perddwbz   [1]))
+cutddwvx   = where((ddwvx   gt perddwvx   [0]) and (ddwvx   lt perddwvx   [1]))
+cutddwvy   = where((ddwvy   gt perddwvy   [0]) and (ddwvy   lt perddwvy   [1]))
+cutddwvz   = where((ddwvz   gt perddwvz   [0]) and (ddwvz   lt perddwvz   [1]))
+cutddwx    = where((ddwx    gt perddwx    [0]) and (ddwx    lt perddwx    [1]))
+cutddwy    = where((ddwy    gt perddwy    [0]) and (ddwy    lt perddwy    [1]))
+cutddwz    = where((ddwz    gt perddwz    [0]) and (ddwz    lt perddwz    [1]))
+cutddwbmag = where((ddwbmag gt perddwbmag [0]) and (ddwbmag lt perddwbmag [1]))
+cutddwvmag = where((ddwvmag gt perddwvmag [0]) and (ddwvmag lt perddwvmag [1]))
+cutddwt    = where((ddwt    gt perddwt    [0]) and (ddwt    lt perddwt    [1]))
+cutddwden  = where((ddwden  gt perddwden  [0]) and (ddwden  lt perddwden  [1]))
+
+
+;calculate cut standard deviation
+sigddwbx   = stddev(ddwbx  [cutddwbx   ])
+sigddwby   = stddev(ddwby  [cutddwby   ])
+sigddwbz   = stddev(ddwbz  [cutddwbz   ])
+sigddwvx   = stddev(ddwvx  [cutddwvx   ])
+sigddwvy   = stddev(ddwvy  [cutddwvy   ])
+sigddwvz   = stddev(ddwvz  [cutddwvz   ])
+sigddwx    = stddev(ddwx   [cutddwx    ])
+sigddwy    = stddev(ddwy   [cutddwy    ])
+sigddwz    = stddev(ddwz   [cutddwz    ])
+sigddwbmag = stddev(ddwbmag[cutddwbmag ])
+sigddwvmag = stddev(ddwvmag[cutddwvmag ])
+sigddwt    = stddev(ddwt   [cutddwt    ])
+sigddwden  = stddev(ddwden [cutddwden  ])
 
 ;standard deviation in ace-wind
-sigdaibx   = stddev(daibx  ) 
-sigdaiby   = stddev(daiby  ) 
-sigdaibz   = stddev(daibz  ) 
-sigdaivx   = stddev(daivx  ) 
-sigdaivy   = stddev(daivy  ) 
-sigdaivz   = stddev(daivz  ) 
-sigdaix    = stddev(daix   ) 
-sigdaiy    = stddev(daiy   ) 
-sigdaiz    = stddev(daiz   ) 
-sigdaibmag = stddev(daibmag) 
-sigdaivmag = stddev(daivmag) 
-sigdait    = stddev(dait   ) 
-sigdaiden  = stddev(daiden ) 
+;Find percentile values
+perdaibx   = cgpercentiles(daibx  ,percentiles=perarray)
+perdaiby   = cgpercentiles(daiby  ,percentiles=perarray)
+perdaibz   = cgpercentiles(daibz  ,percentiles=perarray)
+perdaivx   = cgpercentiles(daivx  ,percentiles=perarray)
+perdaivy   = cgpercentiles(daivy  ,percentiles=perarray)
+perdaivz   = cgpercentiles(daivz  ,percentiles=perarray)
+perdaix    = cgpercentiles(daix   ,percentiles=perarray)
+perdaiy    = cgpercentiles(daiy   ,percentiles=perarray)
+perdaiz    = cgpercentiles(daiz   ,percentiles=perarray)
+perdaibmag = cgpercentiles(daibmag,percentiles=perarray)
+perdaivmag = cgpercentiles(daivmag,percentiles=perarray)
+perdait    = cgpercentiles(dait   ,percentiles=perarray)
+perdaiden  = cgpercentiles(daiden ,percentiles=perarray)
+
+;create array slices
+cutdaibx   = where((daibx   gt perdaibx   [0]) and (daibx   lt perdaibx   [1]))
+cutdaiby   = where((daiby   gt perdaiby   [0]) and (daiby   lt perdaiby   [1]))
+cutdaibz   = where((daibz   gt perdaibz   [0]) and (daibz   lt perdaibz   [1]))
+cutdaivx   = where((daivx   gt perdaivx   [0]) and (daivx   lt perdaivx   [1]))
+cutdaivy   = where((daivy   gt perdaivy   [0]) and (daivy   lt perdaivy   [1]))
+cutdaivz   = where((daivz   gt perdaivz   [0]) and (daivz   lt perdaivz   [1]))
+cutdaix    = where((daix    gt perdaix    [0]) and (daix    lt perdaix    [1]))
+cutdaiy    = where((daiy    gt perdaiy    [0]) and (daiy    lt perdaiy    [1]))
+cutdaiz    = where((daiz    gt perdaiz    [0]) and (daiz    lt perdaiz    [1]))
+cutdaibmag = where((daibmag gt perdaibmag [0]) and (daibmag lt perdaibmag [1]))
+cutdaivmag = where((daivmag gt perdaivmag [0]) and (daivmag lt perdaivmag [1]))
+cutdait    = where((dait    gt perdait    [0]) and (dait    lt perdait    [1]))
+cutdaiden  = where((daiden  gt perdaiden  [0]) and (daiden  lt perdaiden  [1]))
+
+
+;calculate cut standard deviation
+sigdaibx   = stddev(daibx  [cutdaibx   ])
+sigdaiby   = stddev(daiby  [cutdaiby   ])
+sigdaibz   = stddev(daibz  [cutdaibz   ])
+sigdaivx   = stddev(daivx  [cutdaivx   ])
+sigdaivy   = stddev(daivy  [cutdaivy   ])
+sigdaivz   = stddev(daivz  [cutdaivz   ])
+sigdaix    = stddev(daix   [cutdaix    ])
+sigdaiy    = stddev(daiy   [cutdaiy    ])
+sigdaiz    = stddev(daiz   [cutdaiz    ])
+sigdaibmag = stddev(daibmag[cutdaibmag ])
+sigdaivmag = stddev(daivmag[cutdaivmag ])
+sigdait    = stddev(dait   [cutdait    ])
+sigdaiden  = stddev(daiden [cutdaiden  ])
+
+;standard deviation in ace-wind
+;sigdaibx   = stddev(daibx  ) 
+;sigdaiby   = stddev(daiby  ) 
+;sigdaibz   = stddev(daibz  ) 
+;sigdaibx   = stddev(daibx  ) 
+;sigdaiby   = stddev(daiby  ) 
+;sigdaibz   = stddev(daibz  ) 
+;sigdaivx   = stddev(daivx  ) 
+;sigdaivy   = stddev(daivy  ) 
+;sigdaivz   = stddev(daivz  ) 
+;sigdaix    = stddev(daix   ) 
+;sigdaiy    = stddev(daiy   ) 
+;sigdaiz    = stddev(daiz   ) 
+;sigdaibmag = stddev(daibmag) 
+;sigdaivmag = stddev(daivmag) 
+;sigdait    = stddev(dait   ) 
+;sigdaiden  = stddev(daiden ) 
 
 
 ;sigma
-sigma = "162B ;" prevent byte from visually messing with color coding
-plmns = "260B ;"
-mu    = "154B ;"
+;sigma = "162B ;" prevent byte from visually messing with color coding
+;plmns = "260B ;"
+;mu    = "154B ;"
+;
+;sigma = "!4"+string(sigma)+"!X"
+;plmns = "!4"+string(plmns)+"!X"
+;mu    = "!4"+string(mu   )+"!X"
 
-sigma = "!4"+string(sigma)+"!X"
-plmns = "!4"+string(plmns)+"!X"
-mu    = "!4"+string(mu   )+"!X"
+sigma = cgsymbol('sigma')
+plmns = cgsymbol('+-')
+mu    = cgsymbol('mu')
 
 sigfmt = '("=",F5.1)'
 
@@ -538,15 +658,16 @@ aamples = float(n_elements(adoy))
 
 
 ;Set up plots
-device,decomposed=0
-device,retain=2
+set_plot,'ps'
+;device,decomposed=0
+;device,retain=2
 loadct,12
-DLM_LOAD,'PNG'
+;DLM_LOAD,'PNG'
 
 
 
-dlet = "104B;" prevent byte from visually messing with color coding 
-delta = '!4'+string(dlet)+'!X'
+;dlet = "104B;" prevent byte from visually messing with color coding 
+delta = cgsymbol('delta');'!4'+string(dlet)+'!X'
 !p.thick=5
 !x.thick=4
 !y.thick=4
@@ -559,6 +680,7 @@ delta = '!4'+string(dlet)+'!X'
 !y.minor = 2
 !y.ticklen = .04
 !x.ticklen = .04
+!P.FONT = 0
 
 ;Set up histograms
 vxsize = 10
@@ -585,6 +707,7 @@ plot6 = [.74,.10,.98,.45]
 ;-----------------------------------------------------------------------------
 ;Compare distributions for ACE and DSCOVR
 ;-----------------------------------------------------------------------------
+device,filename='../compare_plots/compare_grid.eps',encapsulated=1,/helvetica,xsize=8.0,ysize=5.3,/inch
 
 ;Measured Velocity components dscovr
 vxdwhist = histogram(ddwvx,binsize=vxsize,location=vxdwbins,min=-1000,max=1000)
@@ -604,27 +727,25 @@ format_hist,vzaihist,vzaibins,vzsize
 
 ;plot measured velocity components
 plot,vxdwbins,vxdwhist,psym=10, $
-    xtitle=delta+'Vx (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot1, $
+    xtitle=delta+'Vx [km/s]',ytitle='Occurence [%]',position=plot1, $
     xrange=vxrange,yrange=vyrange
     oplot,vxaibins,vxaihist,psym=10,color=200
-    xyouts,xxylocd,yxylocd,strsigddwvx,charsize=1.5,charthick=2.5
-    xyouts,xxylocd,yxyloca,strsigdaivx,charsize=1.5,charthick=2.5,color=200
-    xyouts,55,yxylocd,'(DSCOVR)',charsize=1.5,charthick=2.5
-    xyouts,55,yxyloca,'(ACE)',charsize=1.5,charthick=2.5,color=200
+    xyouts,xxylocd,yxylocd,strsigddwvx,charsize=0.7,charthick=2.5
+    xyouts,xxylocd,yxyloca,strsigdaivx,charsize=0.7,charthick=2.5,color=200
 
 plot,vydwbins,vydwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Vy (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot2, $
+    xtitle=delta+'Vy [km/s]',ytitle='Occurence [%]',position=plot2, $
     xrange=vxrange,yrange=vyrange
     oplot,vyaibins,vyaihist,psym=10,color=200
-    xyouts,xxylocd,yxylocd,strsigddwvy,charsize=1.5,charthick=2.5
-    xyouts,xxylocd,yxyloca,strsigdaivy,charsize=1.5,charthick=2.5,color=200
+    xyouts,xxylocd,yxylocd,strsigddwvy,charsize=0.7,charthick=2.5
+    xyouts,xxylocd,yxyloca,strsigdaivy,charsize=0.7,charthick=2.5,color=200
 
 plot,vzdwbins,vzdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Vz (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot3, $
+    xtitle=delta+'Vz [km/s]',ytitle='Occurence [%]',position=plot3, $
     xrange=vxrange,yrange=vyrange
     oplot,vzaibins,vzaihist,psym=10,color=200
-    xyouts,xxylocd,yxylocd,strsigddwvz,charsize=1.5,charthick=2.5
-    xyouts,xxylocd,yxyloca,strsigdaivz,charsize=1.5,charthick=2.5,color=200
+    xyouts,xxylocd,yxylocd,strsigddwvz,charsize=0.7,charthick=2.5
+    xyouts,xxylocd,yxyloca,strsigdaivz,charsize=0.7,charthick=2.5,color=200
 
 
 ;Measured Velocity components 
@@ -645,86 +766,103 @@ format_hist,denaihist,denaibins,desize
 
 ;plot measured velocity components
 plot,vmagdwbins,vmagdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Speed (X-WIND) [km/s]',ytitle='Occurence [%]',position=plot4, $
+    xtitle=delta+'Speed [km/s]',ytitle='Occurence [%]',position=plot4, $
     xrange=vxrange,yrange=vyrange
     oplot,vmagaibins,vmagaihist,psym=10,color=200
-    xyouts,xxylocd,yxylocd,strsigddwvmag,charsize=1.5,charthick=2.5
-    xyouts,xxylocd,yxyloca,strsigdaivmag,charsize=1.5,charthick=2.5,color=200
+    xyouts,xxylocd,yxylocd,strsigddwvmag,charsize=0.7,charthick=2.5
+    xyouts,xxylocd,yxyloca,strsigdaivmag,charsize=0.7,charthick=2.5,color=200
 
 plot,tdwbins,tdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Th. Speed (X-WIND)/(WIND) [%]',ytitle='Occurence [%]',position=plot5, $
+    xtitle=delta+'Th. Speed [%]',ytitle='Occurence [%]',position=plot5, $
     xrange=[-50,50],yrange=vyrange
     oplot,taibins,taihist,psym=10,color=200
-    xyouts,-55,yxylocd,strsigddwt,charsize=1.5,charthick=2.5
-    xyouts,-55,yxyloca,strsigdait,charsize=1.5,charthick=2.5,color=200
+    xyouts,-55,yxylocd,strsigddwt,charsize=0.7,charthick=2.5
+    xyouts,-55,yxyloca,strsigdait,charsize=0.7,charthick=2.5,color=200
 
 plot,dendwbins,dendwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Den. (X-WIND)/(WIND) [%]',ytitle='Occurence [%]',position=plot6, $
+    xtitle=delta+'Den. [%]',ytitle='Occurence [%]',position=plot6, $
     xrange=[-50,50],yrange=vyrange
     oplot,denaibins,denaihist,psym=10,color=200
-    xyouts,-55.,yxylocd,strsigddwden,charsize=1.5,charthick=2.5
-    xyouts,-55.,yxyloca,strsigdaiden,charsize=1.5,charthick=2.5,color=200
+    xyouts,-55.,yxylocd,strsigddwden,charsize=0.7,charthick=2.5
+    xyouts,-55.,yxyloca,strsigdaiden,charsize=0.7,charthick=2.5,color=200
 
-write_png,'../compare_plots/compare_grid.png',tvrd(/true)
+device,/close
+;write_png,'../compare_plots/compare_grid.png',tvrd(/true)
 
 ;-----------------------------------------------------------------------------
 ;Compare log distributions for ACE and DSCOVR
 ;-----------------------------------------------------------------------------
 
-lvyrange = [-4,alog10(90)]
+;Set up eps plot
+device,filename='../compare_plots/compare_grid_log.eps',encapsulated=1,/helvetica,xsize=8.5,ysize=5.0,/inch
+!P.Charsize = .5
+!P.charthick = 2.0
+lvyrange = [1.e-4,100]
 
 ;yrange for 2 simga overplotting
 ysiglim = [-10000,10000]
 ;plot measured velocity components
-plot,vxdwbins,alog10(vxdwhist),psym=10, $
-    xtitle=delta+'Vx (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot1, $
-    xrange=vxrange*5,yrange=lvyrange
-    oplot,vxaibins,alog10(vxaihist),psym=10,color=200
+plot,vxdwbins,vxdwhist,psym=10, $
+    xtitle=delta+'Vx [km/s]',ytitle='Occurence [%]',position=plot1, $
+    xrange=[-600,600],yrange=lvyrange,xticks=4,xstyle=1,xminor=3, $
+    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+
+    oplot,vxaibins,vxaihist,psym=10,color=200
     oplot, sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
 
-plot,vydwbins,alog10(vydwhist),psym=10,/NOERASE, $
-    xtitle=delta+'Vy (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot2, $
-    xrange=vxrange*3,yrange=lvyrange
-    oplot,vyaibins,alog10(vyaihist),psym=10,color=200
+plot,vydwbins,vydwhist,psym=10,/NOERASE, $
+    xtitle=delta+'Vy [km/s]',ytitle='Occurence [%]',position=plot2, $
+    xrange=vxrange*3,yrange=lvyrange, $
+    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    oplot,vyaibins,vyaihist,psym=10,color=200
     oplot, sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
 
-plot,vzdwbins,alog10(vzdwhist),psym=10,/NOERASE, $
-    xtitle=delta+'Vz (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot3, $
-    xrange=vxrange*3,yrange=lvyrange
-    oplot,vzaibins,alog10(vzaihist),psym=10,color=200
+plot,vzdwbins,vzdwhist,psym=10,/NOERASE, $
+    xtitle=delta+'Vz [km/s]',ytitle='Occurence [%]',position=plot3, $
+    xrange=vxrange*3,yrange=lvyrange, $
+    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    oplot,vzaibins,vzaihist,psym=10,color=200
     oplot, sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
 
 
 ;plot measured velocity components
-plot,vmagdwbins,alog10(vmagdwhist),psym=10,/NOERASE, $
-    xtitle=delta+'Speed (X-WIND) [km/s]',ytitle='log(Occurence) [log(%)]',position=plot4, $
-    xrange=vxrange*5,yrange=lvyrange
-    oplot,vmagaibins,alog10(vmagaihist),psym=10,color=200
+plot,vmagdwbins,vmagdwhist,psym=10,/NOERASE, $
+    xtitle=delta+'Speed [km/s]',ytitle='Occurence [%]',position=plot4, $
+    xrange=[-600,600],yrange=lvyrange,xticks=4,xstyle=1,xminor=3, $
+    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    oplot,vmagaibins,vmagaihist,psym=10,color=200
     oplot, sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
 
-plot,tdwbins,alog10(tdwhist),psym=10,/NOERASE, $
-    xtitle=delta+'Th. Speed (X-WIND)/(WIND) [%]',ytitle='log(Occurence) [log(%)]',position=plot5, $
-    xrange=[-200,600],yrange=lvyrange
-    oplot,taibins,alog10(taihist),psym=10,color=200
+plot,tdwbins,tdwhist,psym=10,/NOERASE, $
+    xtitle=delta+'Th. Speed [%]',ytitle='Occurence [%]',position=plot5, $
+    xrange=[-200,600],yrange=lvyrange, $
+    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    oplot,taibins,taihist,psym=10,color=200
     oplot, sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
 
-plot,dendwbins,alog10(dendwhist),psym=10,/NOERASE, $
-    xtitle=delta+'Den. (X-WIND)/(WIND) [%]',ytitle='log(Occurence) [log(%)]',position=plot6, $
-    xrange=[-2,6]*100,yrange=lvyrange,xstyle=1
-    oplot,denaibins,alog10(denaihist),psym=10,color=200
+plot,dendwbins,dendwhist,psym=10,/NOERASE, $
+    xtitle=delta+'Den. [%]',ytitle='Occurence [%]',position=plot6, $
+    xrange=[-2,6]*100,yrange=lvyrange,xstyle=1, $
+    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    oplot,denaibins,denaihist,psym=10,color=200
     oplot, sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
 
-write_png,'../compare_plots/compare_grid_log.png',tvrd(/true)
+legend,['DSC-WIND','ACE-WIND'],colors=[0,200],linestyle=[0,0],/right,box=0,charsize=0.65,charthick=2.0
+
+device,/close
+;write_png,'../compare_plots/compare_grid_log.png',tvrd(/true)
 
 ;-----------------------------------------------------------------------------
 ;Check that plot ranges are similar for ACE and DSCOVR
 ;-----------------------------------------------------------------------------
+device,filename='../compare_plots/compare_phys_grid_log.eps',encapsulated=1,/helvetica
+;write_png,'../compare_plots/compare_phys_grid.png',tvrd(/true)
 
 ;Measured Velocity components dscovr
 vxdhist = histogram(dvx,binsize=20,location=vxdbins,min=-1000,max=1000)
@@ -793,7 +931,8 @@ plot,dendbins,dendhist,psym=10, /NOERASE, $
     xrange=[0,20.],yrange=yrange2,ystyle=1
     oplot,denabins,denahist,psym=10,color=200
 
-write_png,'../compare_plots/compare_phys_grid.png',tvrd(/true)
+device,/close
+;write_png,'../compare_plots/compare_phys_grid.png',tvrd(/true)
 
 
 ;----------------------------------------------------------------------------
@@ -853,7 +992,7 @@ plot,wden,ddwt,psym=6, /NOERASE, /NODATA, $
 cgColorbar,position=[.93,.1,.99,.9],title='log(Number)',textthick=3,charsize=2.0,range=[minv,maxv]
 
 
-write_png,'../compare_plots/reg_th_speed_on_X.png',tvrd(/true)
+;write_png,'../compare_plots/reg_th_speed_on_X.png',tvrd(/true)
 
 
 ;----------------------------------------------------------------------------
@@ -912,7 +1051,7 @@ plot,wden,ddwt,psym=6, /NOERASE, /NODATA, $
 cgColorbar,position=[.93,.1,.99,.9],title='log(Number)',textthick=3,charsize=2.0,range=[minv,maxv]
 
 
-write_png,'../compare_plots/reg_abs_th_speed_on_X.png',tvrd(/true)
+;write_png,'../compare_plots/reg_abs_th_speed_on_X.png',tvrd(/true)
 
 
 
