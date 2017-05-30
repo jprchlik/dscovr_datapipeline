@@ -114,11 +114,11 @@ dq = pls.dqf.dat
 
 
 ;find flagged values
-rvx = where((vx le -9999.0) or (dq lt 3))
-rvy = where((vy le -9999.0) or (dq lt 3))
-rvz = where((vz le -9999.0) or (dq lt 3))
-rwd = where((wd le -9999.0) or (dq lt 3))
-rnp = where((np le -9999.0) or (dq lt 3))
+rvx = where((vx le -9999.0) or (dq lt 0))
+rvy = where((vy le -9999.0) or (dq lt 0))
+rvz = where((vz le -9999.0) or (dq lt 0))
+rwd = where((wd le -9999.0) or (dq lt 0))
+rnp = where((np le -9999.0) or (dq lt 0))
 
 ;Replace -1.e30 with -9999.0
 if n_elements(size(rvx)) gt 3 then vx[rvx] = -9999.0
