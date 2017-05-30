@@ -98,6 +98,7 @@ plsf = new_ver(parchive,pcdf)
 orbf = new_ver(tarchive,tcdf)
 
 ;read in cdf files for given day
+print,plsf
 mag = read_mycdf("",magf,/all)
 pls = read_mycdf("",plsf,/all)
 orb = read_mycdf("",orbf,/all)
@@ -109,14 +110,15 @@ vy = pls.v_gse.dat[1,*]
 vz = pls.v_gse.dat[2,*]
 wd = pls.THERMAL_SPD.dat
 np = pls.np.dat
+dq = pls.dqf.dat
 
 
 ;find flagged values
-rvx = where(vx le -9999.0)
-rvy = where(vy le -9999.0)
-rvz = where(vz le -9999.0)
-rwd = where(wd le -9999.0)
-rnp = where(np le -9999.0)
+rvx = where((vx le -9999.0) or (dq lt 3))
+rvy = where((vy le -9999.0) or (dq lt 3))
+rvz = where((vz le -9999.0) or (dq lt 3))
+rwd = where((wd le -9999.0) or (dq lt 3))
+rnp = where((np le -9999.0) or (dq lt 3))
 
 ;Replace -1.e30 with -9999.0
 if n_elements(size(rvx)) gt 3 then vx[rvx] = -9999.0
