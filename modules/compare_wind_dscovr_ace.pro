@@ -810,6 +810,8 @@ plot,vxdwbins,vxdwhist,psym=10, $
     oplot,vxaibins,vxaihist,psym=10,color=200
     oplot, sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,perddwvx[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+    oplot,perddwvx[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,vydwbins,vydwhist,psym=10,/NOERASE, $
     xtitle=delta+'Vy [km/s]',ytitle='Occurence [%]',position=plot2, $
@@ -818,6 +820,8 @@ plot,vydwbins,vydwhist,psym=10,/NOERASE, $
     oplot,vyaibins,vyaihist,psym=10,color=200
     oplot, sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,perddwvy[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+    oplot,perddwvy[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,vzdwbins,vzdwhist,psym=10,/NOERASE, $
     xtitle=delta+'Vz [km/s]',ytitle='Occurence [%]',position=plot3, $
@@ -826,6 +830,8 @@ plot,vzdwbins,vzdwhist,psym=10,/NOERASE, $
     oplot,vzaibins,vzaihist,psym=10,color=200
     oplot, sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,perddwvz[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+    oplot,perddwvz[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 
 ;plot measured velocity components
@@ -836,6 +842,8 @@ plot,vmagdwbins,vmagdwhist,psym=10,/NOERASE, $
     oplot,vmagaibins,vmagaihist,psym=10,color=200
     oplot, sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,perddwvmag[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+    oplot,perddwvmag[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,tdwbins,tdwhist,psym=10,/NOERASE, $
     xtitle=delta+'Th. Speed [%]',ytitle='Occurence [%]',position=plot5, $
@@ -844,6 +852,8 @@ plot,tdwbins,tdwhist,psym=10,/NOERASE, $
     oplot,taibins,taihist,psym=10,color=200
     oplot, sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,perddwt[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+    oplot,perddwt[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,dendwbins,dendwhist,psym=10,/NOERASE, $
     xtitle=delta+'Den. [%]',ytitle='Occurence [%]',position=plot6, $
@@ -852,6 +862,8 @@ plot,dendwbins,dendwhist,psym=10,/NOERASE, $
     oplot,denaibins,denaihist,psym=10,color=200
     oplot, sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
+    oplot,perddwden[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+    oplot,perddwden[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 legend,['DSC-WIND','ACE-WIND'],colors=[0,200],linestyle=[0,0],/right,box=0,charsize=0.65,charthick=2.0
 
