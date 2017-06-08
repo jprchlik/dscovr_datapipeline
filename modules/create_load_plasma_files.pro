@@ -138,10 +138,10 @@ tbz = mag.b1gse.dat[2,*]
 tbm = mag.b1f1.dat
 
 ;Only interpolate non fill values
-rbx = where(tbx le -9990.0)
-rby = where(tby le -9990.0)
-rbz = where(tbz le -9990.0)
-rbm = where(tbm le -9990.0)
+rbx = where(tbx gt -9990.0)
+rby = where(tby gt -9990.0)
+rbz = where(tbz gt -9990.0)
+rbm = where(tbm gt -9990.0)
 
 bx = interpol(tbx[rbx], jdm[rbx] ,jdp)
 by = interpol(tby[rby], jdm[rby], jdp)
