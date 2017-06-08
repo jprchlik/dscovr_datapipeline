@@ -667,7 +667,7 @@ loadct,12
 
 
 ;dlet = "104B;" prevent byte from visually messing with color coding 
-delta = cgsymbol('delta');'!4'+string(dlet)+'!X'
+delta = cgsymbol('Delta');'!4'+string(dlet)+'!X'
 !p.thick=5
 !x.thick=4
 !y.thick=4
@@ -697,12 +697,12 @@ yxylocd = 47
 yxyloca = 43
 
 ;plot locations
-plot1 = [.08,.6,.32,.95]
-plot2 = [.41,.6,.65,.95]
-plot3 = [.74,.6,.98,.95]
-plot4 = [.08,.10,.32,.45]
-plot5 = [.41,.10,.65,.45] 
-plot6 = [.74,.10,.98,.45]
+plot1 = [.08,.6,.34,.95]
+plot2 = [.40,.6,.66,.95]
+plot3 = [.72,.6,.98,.95]
+plot4 = [.08,.10,.34,.45]
+plot5 = [.40,.10,.66,.45] 
+plot6 = [.72,.10,.98,.45]
 
 ;-----------------------------------------------------------------------------
 ;Compare distributions for ACE and DSCOVR
@@ -797,73 +797,73 @@ device,/close
 device,filename='../compare_plots/compare_grid_log.eps',encapsulated=1,/helvetica,xsize=8.5,ysize=5.0,/inch
 !P.Charsize = .5
 !P.charthick = 2.0
-lvyrange = [1.e-4,100]
+lvyrange = [1.e-3,100]
 
 ;yrange for 2 simga overplotting
 ysiglim = [-10000,10000]
 ;plot measured velocity components
 plot,vxdwbins,vxdwhist,psym=10, $
-    xtitle=delta+'Vx [km/s]',ytitle='Occurence [%]',position=plot1, $
-    xrange=[-600,600],yrange=lvyrange,xticks=4,xstyle=1,xminor=3, $
+    xtitle=delta+'V!Bx!N [km/s]',ytitle='Occurrence [%]',position=plot1, $
+    xrange=[-400,400],yrange=lvyrange,xticks=4,xstyle=1,xminor=3, $
     ytickformat='exponent',ylog=1,ystyle=1,yminor=5
 
     oplot,vxaibins,vxaihist,psym=10,color=200
     oplot, sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvx*[2.,2.],ysiglim,psym=10,linestyle=2
-    oplot,perddwvx[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
-    oplot,perddwvx[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvx[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvx[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,vydwbins,vydwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Vy [km/s]',ytitle='Occurence [%]',position=plot2, $
+    xtitle=delta+'V!By!N [km/s]',ytitle='',position=plot2, $
     xrange=vxrange*3,yrange=lvyrange, $
-    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    ytickformat='(A1)',ylog=1,ystyle=1,yminor=5
     oplot,vyaibins,vyaihist,psym=10,color=200
     oplot, sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvy*[2.,2.],ysiglim,psym=10,linestyle=2
-    oplot,perddwvy[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
-    oplot,perddwvy[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvy[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvy[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,vzdwbins,vzdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Vz [km/s]',ytitle='Occurence [%]',position=plot3, $
+    xtitle=delta+'V!Bz!N [km/s]',ytitle='',position=plot3, $
     xrange=vxrange*3,yrange=lvyrange, $
-    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    ytickformat='(A1)',ylog=1,ystyle=1,yminor=5
     oplot,vzaibins,vzaihist,psym=10,color=200
     oplot, sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvz*[2.,2.],ysiglim,psym=10,linestyle=2
-    oplot,perddwvz[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
-    oplot,perddwvz[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvz[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvz[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 
 ;plot measured velocity components
 plot,vmagdwbins,vmagdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Speed [km/s]',ytitle='Occurence [%]',position=plot4, $
-    xrange=[-600,600],yrange=lvyrange,xticks=4,xstyle=1,xminor=3, $
+    xtitle=delta+'!4|!XV!4|!X [km/s]',ytitle='Occurrence [%]',position=plot4, $
+    xrange=[-400,400],yrange=lvyrange,xticks=4,xstyle=1,xminor=3, $
     ytickformat='exponent',ylog=1,ystyle=1,yminor=5
     oplot,vmagaibins,vmagaihist,psym=10,color=200
     oplot, sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwvmag*[2.,2.],ysiglim,psym=10,linestyle=2
-    oplot,perddwvmag[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
-    oplot,perddwvmag[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvmag[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwvmag[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,tdwbins,tdwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Th. Speed [%]',ytitle='Occurence [%]',position=plot5, $
+    xtitle=delta+'w [%]',ytitle='',position=plot5, $
     xrange=[-200,600],yrange=lvyrange, $
-    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    ytickformat='(A1)',ylog=1,ystyle=1,yminor=5
     oplot,taibins,taihist,psym=10,color=200
     oplot, sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwt*[2.,2.],ysiglim,psym=10,linestyle=2
-    oplot,perddwt[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
-    oplot,perddwt[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwt[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwt[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 plot,dendwbins,dendwhist,psym=10,/NOERASE, $
-    xtitle=delta+'Den. [%]',ytitle='Occurence [%]',position=plot6, $
+    xtitle=delta+'n [%]',ytitle='',position=plot6, $
     xrange=[-2,6]*100,yrange=lvyrange,xstyle=1, $
-    ytickformat='exponent',ylog=1,ystyle=1,yminor=5
+    ytickformat='(A1)',ylog=1,ystyle=1,yminor=5
     oplot,denaibins,denaihist,psym=10,color=200
     oplot, sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
     oplot,-sigddwden*[2.,2.],ysiglim,psym=10,linestyle=2
-    oplot,perddwden[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
-    oplot,perddwden[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwden[0]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
+;    oplot,perddwden[1]*[1.,1.],ysiglim,psym=10,linestyle=1,color=100
 
 legend,['DSC-WIND','ACE-WIND'],colors=[0,200],linestyle=[0,0],/right,box=0,charsize=0.65,charthick=2.0
 
