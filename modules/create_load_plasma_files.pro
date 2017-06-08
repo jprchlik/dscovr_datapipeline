@@ -114,11 +114,11 @@ dq = pls.dqf.dat
 
 
 ;find flagged values
-rvx = where((vx le -9999.0) or (dq lt 0))
-rvy = where((vy le -9999.0) or (dq lt 0))
-rvz = where((vz le -9999.0) or (dq lt 0))
-rwd = where((wd le -9999.0) or (dq lt 0))
-rnp = where((np le -9999.0) or (dq lt 0))
+rvx = where((vx le -9999.0) or (dq gt 0))
+rvy = where((vy le -9999.0) or (dq gt 0))
+rvz = where((vz le -9999.0) or (dq gt 0))
+rwd = where((wd le -9999.0) or (dq gt 0))
+rnp = where((np le -9999.0) or (dq gt 0))
 
 ;Replace -1.e30 with -9999.0
 if n_elements(size(rvx)) gt 3 then vx[rvx] = -9999.0
@@ -127,25 +127,35 @@ if n_elements(size(rvz)) gt 3 then vz[rvz] = -9999.0
 if n_elements(size(rwd)) gt 3 then wd[rwd] = -9999.0
 if n_elements(size(rnp)) gt 3 then np[rnp] = -9999.0
 
-
-
-
+jdp = CDF_EPOCH_TOJULDAYS(pls.epoch.dat)
+jdm = CDF_EPOCH_TOJULDAYS(mag.epoch1.dat)
+jdo = CDF_EPOCH_TOJULDAYS(orb.epoch.dat)
 
 ;Interpolate mag. data
-bx = interpol(mag.b1gse.dat[0,*],mag.epoch1.dat,pls.epoch.dat)
-by = interpol(mag.b1gse.dat[1,*],mag.epoch1.dat,pls.epoch.dat)
-bz = interpol(mag.b1gse.dat[2,*],mag.epoch1.dat,pls.epoch.dat)
-bm = interpol(mag.b1f1.dat,mag.epoch1.dat,pls.epoch.dat)
+tbx = mag.b1gse.dat[0,*]
+tby = mag.b1gse.dat[1,*]
+tbz = mag.b1gse.dat[2,*]
+tbm = mag.b1f1.dat
+
+;Only interpolate non fill values
+rbx = where(tbx le -9990.0)
+rby = where(tby le -9990.0)
+rbz = where(tbz le -9990.0)
+rbm = where(tbm le -9990.0)
+
+bx = interpol(tbx[rbx], jdm[rbx] ,jdp)
+by = interpol(tby[rby], jdm[rby], jdp)
+bz = interpol(tbz[rbz], jdm[rbz], jdp)
+bm = interpol(tbm[rbm], jdm[rbm], jdp)
 
 ;Interpolate pos. data
-x = interpol(orb.gse_pos.dat[0,*],orb.epoch.dat,pls.epoch.dat)
-y = interpol(orb.gse_pos.dat[1,*],orb.epoch.dat,pls.epoch.dat)
-z = interpol(orb.gse_pos.dat[2,*],orb.epoch.dat,pls.epoch.dat)
-
+RE = 6371; Earth radius in km, for conversion of trajectories
+x = interpol(orb.gse_pos.dat[0,*], jdo, jdp)/RE 
+y = interpol(orb.gse_pos.dat[1,*], jdo, jdp)/RE
+z = interpol(orb.gse_pos.dat[2,*], jdo, jdp)/RE
 
 ;convert epoch into doy fraction
-cdf_tt2000,pls.epoch.dat,byear,bmon,bdom,bhor,bmin,bsec,/break
-ddoy = JULDAY(bmon,bdom,byear,bhor,bmin,bsec)-JULDAY(1,1,year,0,0,0)+1.
+ddoy = jdp - JULDAY(1,1,year,0,0,0)+1.
 
 DOY_DSC   = ddoy
 BX_DSC    = bx
