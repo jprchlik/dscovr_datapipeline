@@ -181,14 +181,15 @@ case 1 of
         sdoy = leap_check(year)
         load_plasma,syear,sdoy,sdoy+1,/wind,doy=wdoy1,den=wden1
         load_plasma,year,1,edoy,/wind,doy=wdoy2,den=wden2
-        wdoy = [wdoy1,wdoy2]
+        wdoy = [wdoy1-sdoy,wdoy2]
+        print,wdoy
         wden = [wden1,wden2]
     end
 ;If last doy end search with first day of next year        
     (edoy gt ldoy+1): begin
         load_plasma,year,doy,sdoy,/wind,doy=wdoy1,den=wden1
         load_plasma,eyear,1,2,/wind,doy=wdoy2,den=wden2
-        wdoy = [wdoy1,wdoy2]
+        wdoy = [wdoy1,wdoy2+sdoy]
         wden = [wden1,wden2]
     end
 ;No year break just use load plasma
@@ -199,7 +200,9 @@ endcase
 dtime = chi_min_time(wdoy,wden,doy_val,den_val,den_unc,span=span,samp=samp)
 
 ;Difference between observed DSCOVR and interpolated WIND data
-del_den = interpol(wdoy,wden,doy_val+dtime[0])-den_val
+wind_den = interpol(wden,wdoy,doy_val+dtime[0])
+del_den = wind_den-den_val
+
 
 ;The difference quoted as a n-sigma uncertainty
 sig_den = abs(del_den)/den_unc
@@ -209,10 +212,15 @@ bad_den = where(sig_den gt sigcut)
 
 ;create array groups for areas where the density is 5 times greater than the unc.
 ;for an extended period (npix)
-if n_elements(size(bad_den)) gt 3 then ind_grp = grp_obs(bad_den,npix)
+if n_elements(size(bad_den)) gt 3 then windcut = grp_obs(bad_den,npix) else windcut = -9999.0
 
 ;compute the array values to return to the main program
-if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
+;;if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
+;;
+;;;print information to make sure its working properly (hint it is not)
+;if n_elements(size(windcut)) gt 3 then print,sig_den[windcut],npix,sigcut
+
+;check to see the median value inside the block of values
 
 return,windcut
 end
@@ -239,18 +247,22 @@ g1 = ind_grp[0:n_elements(ind_grp)-2:2]
 g2 = ind_grp[1:n_elements(ind_grp)-1:2]
 
 ;get where the grouped array is greater than the npix values
-bad = where(g2-g1 ge npix)
+bad = where(g2-g1 ge npix,bcnt)
 
-;starting and ending bad regions in ind_grp array
-s1 = g1[bad]
-e1 = g2[bad]
-
-;starting and ending bad regions in y array
-s2 = ind_grp[s1]
-e2 = ind_grp[e1]
-
-;covert split arrays into indices array
-for i=0,n_elements(s2)-1 do if i eq 0 then grp = findgen(fix(e2[i]-s2[i])+1)+s2[i] else grp = [temporary(grp),findgen(fix(e2[i]-s2[i])+1)+s2[i]]
+;if regions where npix different from npix exist compute times
+if bcnt gt 0 then begin
+    ;starting and ending bad regions in ind_grp array
+    s1 = g1[bad]
+    e1 = g2[bad]
+    
+    ;starting and ending bad regions in y array
+    s2 = y[s1]
+    e2 = y[e1]
+    
+    
+    ;covert split arrays into indices array
+    for i=0,n_elements(s2)-1 do if i eq 0 then grp = findgen(fix(e2[i]-s2[i])+1)+s2[i] else grp = [temporary(grp),findgen(fix(e2[i]-s2[i])+1)+s2[i]]
+endif else grp = -9999.0
 
 
 return,grp
@@ -574,13 +586,12 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
 ;set bad dqf_val where bad points exist
 if n_elements(size(badv)) gt 3 then dqf_val[badv] = 3
 
-;check for Vx values 20 sigma away from the median
+;check for Vx values 5 sigma away from the median
 user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
 ;check for density values 5 sigma away from WIND for more than 25 minutes
-dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=5,npix=2)
-print,dens_check
+dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=2,npix=25)
 if n_elements(size(dens_check)) gt 3 then dqf_val[dens_check] = 2
 
 ;fix for solar wind's aberration in Y component
