@@ -92,7 +92,7 @@ end
 ;    span = time in minutes to minimize
 ;    samp = sampling fequence in minutes
 ;--------------------------------------------------
-function chi_min_time,wdoy,wd,wx,wy,wz,ddoy,dd,dx,dy,dz,ddd,ddx,ddy,ddz,span=span,samp=samp
+function chi_min_time_2,wdoy,wd,wx,wy,wz,ddoy,dd,dx,dy,dz,ddd,ddx,ddy,ddz,span=span,samp=samp
 if keyword_set(span) then span = span else span = 10 ;span to loop +/- in minutes
 if keyword_set(samp) then samp = samp else samp = 0.50 ; sampling fequency in minutes
 
@@ -291,6 +291,8 @@ plot5 = [.1,yb0+0.*psz,.95,yb0+1.*psz]
 
 
 ;Plot proton density
+;where the density if off by n sigma
+dn = where(dqf eq 2,dncnt)
 plot,jwdoy,wd,psym=6,color=0,ytitle='Density [cm^-3]',/nodata,background=255,charsize=2,$
      font=1,charthick=3,position=plot1,xtickformat="(A1)"
 for i=0,n_elements(jddoy)-1 do begin
@@ -299,6 +301,7 @@ for i=0,n_elements(jddoy)-1 do begin
 endfor
 oplot,jwdoy,wd,psym=6,color=wcol
 oplot,jddoy,dd,psym=8,color=dcol
+if dncnt gt 0 then oplot,jddoy[dn],dd[dn],psym=8,color=120,s=2.0
 ;oplot,adoy,ad,psym=5,color=acol
 
 ;Plot proton thermal speed
@@ -310,6 +313,7 @@ for i=0,n_elements(jddoy)-1 do begin
 endfor
 oplot,jwdoy,wew,psym=6,color=wcol
 oplot,jddoy,dew,psym=8,color=dcol
+if dncnt gt 0 then oplot,jddoy[dn],dew[dn],psym=8,color=120,s=2.0
 ;oplot,adoy,ad,psym=5,color=acol
 
 
@@ -375,7 +379,7 @@ boew = bot
 nofill = where((dd gt -9998.) and (dx gt -9998.) and (dy gt -9998.) and (dz gt -9998.))
 ferrs = fltarr(n_elements(nofill))+1
 ;minimize differences using time and errors
-dtime = chi_min_time(bwdoy,bwd,bwx,bwy,bwz,ddoy[nofill],dd[nofill],dx[nofill],dy[nofill],dz[nofill],ddd[nofill],ddx[nofill],ddy[nofill],ddz[nofill],span=12);output in fraction of day of hear
+dtime = chi_min_time_2(bwdoy,bwd,bwx,bwy,bwz,ddoy[nofill],dd[nofill],dx[nofill],dy[nofill],dz[nofill],ddd[nofill],ddx[nofill],ddy[nofill],ddz[nofill],span=12);output in fraction of day of hear
 dtime = float(dtime[0])
 
 ;Compare deltas
@@ -402,7 +406,7 @@ if n_elements(nofill) lt 4 then ace=0
 ;minimize differences using time and errors
 if ace eq 1 then begin
     ferrs = fltarr(n_elements(nofill))+1
-    dtime1 = chi_min_time(bodoy,bod,box,boy,boz,adoy[nofill],ad[nofill],ax[nofill],ay[nofill],az[nofill],ferrs,ferrs,ferrs,ferrs);output in fraction of day of hear
+    dtime1 = chi_min_time_2(bodoy,bod,box,boy,boz,adoy[nofill],ad[nofill],ax[nofill],ay[nofill],az[nofill],ferrs,ferrs,ferrs,ferrs);output in fraction of day of hear
     dtime1 = float(dtime1[0])
     ;create spline from wind data assuming small sigma
     sad = spline(bodoy,bod,adoy+dtime1)
