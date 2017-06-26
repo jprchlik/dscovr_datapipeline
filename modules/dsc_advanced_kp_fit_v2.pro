@@ -1701,7 +1701,7 @@ match = where(abs(uw_i - u) lt 10 and nw_i gt 0 and n gt 0 $
               and nw_i gt 0 and ww_i gt 0 and w gt 0 and n lt 100 and $
               (ww_i/w) gt 0.5 and (ww_i/w) lt 2., nmatch)
 
- dev = stdev( nw_i[match]/n[match])
+ dev = stddev( nw_i[match]/n[match])
  vr = u[match]                                            
  ratio = nw_i[match]/n[match]      
  ord = sort(vr)                        
@@ -1971,4 +1971,10 @@ pro advkp_1min_corrected_makeCDF, year, doy
 end
 
 pro scratch
+end
+
+
+;Allows you to compile the full file
+pro dsc_advanced_kp_fit_v2
+
 end
