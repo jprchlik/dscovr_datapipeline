@@ -76,7 +76,192 @@ end
 ;--------------------------------------------------
 ;
 ;USAGE
-;replace = sig_flag,y,yerr,npix=npix,sigcut=sigcut,tol=tol
+;ldoy = leap_check(year)
+;
+;COMMENT
+;Checks for leap year
+;--------------------------------------------------
+function leap_check,year
+;leap year check
+four = year/4.
+;last day of year
+ldoy = 365
+if four-fix(four) lt .20 then ldoy = 366
+return,ldoy
+end
+
+;--------------------------------------------------
+;USAGE
+;dtime = chi_min_time(wdoy,wd,ddoy,dd,ddd,span=span,samp=samp)
+;
+;COMMENTS
+;    Function which spans +/- 10 minutes to find Chi^2 min
+;    wdoy = WIND day of year
+;    wd   = WIND-density 
+;    ddoy = DSCOVR day of year
+;    dd   = DSCOVR-density
+;    ddd  = DSCOVR uncertainty in density
+;    span = time in minutes to minimize
+;    samp = sampling fequence in minutes
+;--------------------------------------------------
+
+function chi_min_time,wdoy,wd,ddoy,dd,ddd,span=span,samp=samp
+if keyword_set(span) then span = span else span = 15 ;span to loop +/- in minutes
+if keyword_set(samp) then samp = samp else samp = 0.50 ; sampling fequency in minutes
+
+span = span/60./24. ;turn into fraction of a day
+samp = samp/60./24. ;turn into fraction of a day
+
+;array of offset to loop over
+nbins = round(2.*span/samp)+1
+tvals = findgen(nbins)*samp-span
+cvals = fltarr(nbins) ; array of zeros to store chi^2 vals
+
+;loop over points for chi2 sampling
+for i=0,nbins-1 do begin
+    ;create interpolation from wind data assuming small sigma
+    sdd = interpol(wd,wdoy,ddoy+tvals[i])-dd
+    chi2 = total(sdd^2/ddd^2)
+;store chi2 val
+    cvals[i] = chi2
+endfor
+
+;fine sample chi2 distirbution to find minimum value
+fsamp = samp/100.
+;array of offset to loop over
+fnbins = round(2.*span/fsamp)+1
+ftvals = findgen(fnbins)*fsamp-span
+fcvals = interpol(cvals,tvals,ftvals,/LSQUADRATIC) ; array of of chi^2 vals
+
+;minimum chi^2 
+chim = where(fcvals eq min(fcvals))
+if n_elements(size(chim)) gt 3 then begin ;move the time as little as possible
+    dtime = ftvals[chim]
+    minmo = where(abs(dtime) eq min(abs(dtime))) ; move the minimum amount
+    dtime = dtime[minmo]
+endif else begin 
+    dtime = 0. ; return 0 if no min??
+endelse
+
+print,'Chi^2 min value',strcompress(min(fcvals),/remove_all)
+print,'Chi^2 time offset',strcompress(dtime*24.*60.),'min'
+
+
+return,dtime
+end
+
+;--------------------------------------------------
+;
+;USAGE
+;replace = den_flag(den_val,den_err,doy_val,sigcut=sigcut,npix=npix)
+;
+;COMMENTS
+;Sends flag for densities which differ by sigcut*measures_sigma from WIND
+;
+;--------------------------------------------------
+function den_flag,den_val,den_unc,doy_val,year,sigcut=sigcut,npix=npix
+if keyword_set(npix) then npix = npix else npix = 25 ; 25 minute check
+if keyword_set(sigcut) then sigcut=sigcut else sigcut = 5.00
+
+
+;get doy 
+doy = fix(doy_val[0])
+
+;start doy
+sdoy = doy - 1.
+;end doy
+edoy = doy + 2.
+
+ldoy = leap_check(year)
+
+case 1 of
+    (sdoy lt 1): begin
+;If first doy start search with last day of previous year
+        syear = year-1
+        sdoy = leap_check(year)
+        load_plasma,syear,sdoy,sdoy+1,/wind,doy=wdoy1,den=wden1
+        load_plasma,year,1,edoy,/wind,doy=wdoy2,den=wden2
+        wdoy = [wdoy1,wdoy2]
+        wden = [wden1,wden2]
+    end
+;If last doy end search with first day of next year        
+    (edoy gt ldoy+1): begin
+        load_plasma,year,doy,sdoy,/wind,doy=wdoy1,den=wden1
+        load_plasma,eyear,1,2,/wind,doy=wdoy2,den=wden2
+        wdoy = [wdoy1,wdoy2]
+        wden = [wden1,wden2]
+    end
+;No year break just use load plasma
+    else: load_plasma,year,sdoy,edoy,/wind,doy=wdoy,den=wden
+endcase
+     
+;time offset between WIND and DSCOVR
+dtime = chi_min_time(wdoy,wden,doy_val,den_val,den_unc,span=span,samp=samp)
+
+;Difference between observed DSCOVR and interpolated WIND data
+del_den = interpol(wdoy,wden,doy_val+dtime[0])-den_val
+
+;The difference quoted as a n-sigma uncertainty
+sig_den = abs(del_den)/den_unc
+
+;where the measured uncertainty is 5 time greater than the DSCOVR WIND difference
+bad_den = where(sig_den gt sigcut)
+
+;create array groups for areas where the density is 5 times greater than the unc.
+;for an extended period (npix)
+if n_elements(size(bad_den)) gt 3 then ind_grp = grp_obs(bad_den,npix)
+
+;compute the array values to return to the main program
+if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
+
+return,windcut
+end
+
+;--------------------------------------------------
+;
+;USAGE
+;grp = grp_obs(y,npix)
+;
+;COMMENTS
+;Returns an array of indices which demark the beginning and end of a group
+;--------------------------------------------------
+function grp_obs,y,npix
+
+ind_grp = [0]
+
+;looks at each interior element if the diff is 1 contiue else add y[i] and y[i+1] do array
+for i=1,n_elements(y)-2 do if y[i+1]-y[i] ne 1 then ind_grp = [temporary(ind_grp), i, i+1]
+
+;include the last element always
+ind_grp = [temporary(ind_grp),n_elements(y)-1]
+
+g1 = ind_grp[0:n_elements(ind_grp)-2:2]
+g2 = ind_grp[1:n_elements(ind_grp)-1:2]
+
+;get where the grouped array is greater than the npix values
+bad = where(g2-g1 ge npix)
+
+;starting and ending bad regions in ind_grp array
+s1 = g1[bad]
+e1 = g2[bad]
+
+;starting and ending bad regions in y array
+s2 = ind_grp[s1]
+e2 = ind_grp[e1]
+
+;covert split arrays into indices array
+for i=0,n_elements(s2)-1 do if i eq 0 then grp = findgen(fix(e2[i]-s2[i])+1)+s2[i] else grp = [temporary(grp),findgen(fix(e2[i]-s2[i])+1)+s2[i]]
+
+
+return,grp
+end
+
+
+
+;--------------------------------------------------
+;
+;USAGE
+;replace = sig_flag(y,yerr,npix=npix,sigcut=sigcut,tol=tol)
 ;
 ;COMMENTS
 ;Sends flag for values which signficantly differ from the running median
@@ -226,8 +411,15 @@ return,root
 end
 
 
+;--------------------------------------------------
+;ROUTINE for coverting idlsave file to CDF file
+;Coverts idl save files to CDF format
+;
+;USAGE
+;idl_dscovr_to_cdf,year,doy,version,archive=archive,skeleton=skeleton,filefmt=filefmt, $
+;                  outfmt=outfmt,orchive=orchive,outdom=outdom
+;--------------------------------------------------
 pro idl_dscovr_to_cdf,year,doy,version,archive=archive,skeleton=skeleton,filefmt=filefmt,outfmt=outfmt,orchive=orchive,outdom=outdom
-
 
 if keyword_set(archive) then archive=archive else archive='/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected';get the default location of DSCOVR archive
 archive = archive+'/'
@@ -315,6 +507,21 @@ utemp= root.T.uncertainty
 
 
 
+;-----------------------------------------------------
+;bit/byte table (2017/06/23 J. Prchlik)
+;     s | 
+; f   p | b  n
+; i d i | y  o
+; l e k | t  t
+; l n e | e  e
+; 0 0 0 | 0  good
+; 0 0 1 | 1  spiked in DSCOVR
+; 0 1 0 | 2  prolongged sigma density mismatch WIND/DSCOVR 
+; 1 0 0 | 3  data drop out (filled)
+;-------| 4-7 Cannot duplicate flags
+;
+;
+;-----------------------------------------------------
 ;data quailty flag
 dqf_val = intarr(n_elements(temp));good (0) by default
 
@@ -365,12 +572,16 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
            )
 
 ;set bad dqf_val where bad points exist
-if n_elements(size(badv)) gt 3 then dqf_val[badv] = 2
+if n_elements(size(badv)) gt 3 then dqf_val[badv] = 3
 
 ;check for Vx values 20 sigma away from the median
 user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
+;check for density values 5 sigma away from WIND for more than 25 minutes
+dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=5,npix=2)
+print,dens_check
+if n_elements(size(dens_check)) gt 3 then dqf_val[dens_check] = 2
 
 ;fix for solar wind's aberration in Y component
 ;solab = 29.78 ;km/s
