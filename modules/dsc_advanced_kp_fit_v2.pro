@@ -988,7 +988,7 @@ loadct, 39
 
 ; (1.2) Allows for xwindow plotting in batch mode
 device, decomposed = 0
-device, RETAIN=2
+;device, RETAIN=2
 DLM_LOAD,'PNG' ;Added so PNG file creation cannot error
 
 get_spectra, year, doy, ia, ib, ic, spec_jd, verbose=verbose ; get the current spectrum arrays
