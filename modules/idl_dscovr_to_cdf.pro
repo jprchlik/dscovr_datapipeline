@@ -186,7 +186,17 @@ if bcnt gt 0 then begin
     
     
     ;covert split arrays into indices array
-    for i=0,n_elements(s2)-1 do if i eq 0 then grp = findgen(fix(e2[i]-s2[i])+1)+s2[i] else grp = [temporary(grp),findgen(fix(e2[i]-s2[i])+1)+s2[i]]
+    ;also start the bad pixel npix before and end npix after
+    ;for i=0,n_elements(s2)-1 do if i eq 0 then grp = findgen(fix(e2[i]-s2[i])+1)+s2[i] else grp = [temporary(grp),findgen(fix(e2[i]-s2[i])+1)+s2[i]]
+    for i=0,n_elements(s2)-1 do begin
+        s_cut = s2[i]-npix 
+        e_cut = e2[i]+npix 
+        ;prevent s_cut or e_cut from going out of bounds
+        if s_cut lt 0 then s_cut=0
+        if e_cut gt 1440 then e_cut=1440
+        print,s_cut,e_cut
+        if i eq 0 then grp = findgen(fix(e_cut-s_cut)+1)+s_cut else grp = [temporary(grp),findgen(fix(e_cut-s_cut)+1)+s_cut]
+    endfor
 endif else grp = -9999.0
 
 
@@ -599,7 +609,7 @@ user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
 ;check for density values 5 sigma away from WIND for more than 25 minutes
-dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=2,npix=15)
+dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=2,npix=25)
 if n_elements(size(dens_check)) gt 3 then dqf_val[dens_check] = 2
 
 ;fix for solar wind's aberration in Y component
