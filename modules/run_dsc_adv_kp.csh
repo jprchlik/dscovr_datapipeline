@@ -43,5 +43,8 @@ setenv IDL_PATH /usr/local/itt/idl/idl${IDL_VER}/lib
 
 setenv IDL_DLM_PATH "/home/jprchlik/personaladditions/code/idl/cdawlib/source:<IDL_DEFAULT>"
 
-idl -e "calc_through_errors"
+cd /crater/observatories/dscovr/code/modules
+unsetenv DISPLAY
+
+idl -e "calc_through_errors,/reflag"
 
