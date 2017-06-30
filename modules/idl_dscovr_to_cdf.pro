@@ -153,81 +153,6 @@ end
 ;--------------------------------------------------
 ;
 ;USAGE
-;replace = den_flag(den_val,den_err,doy_val,sigcut=sigcut,npix=npix)
-;
-;COMMENTS
-;Sends flag for densities which differ by sigcut*measures_sigma from WIND
-;
-;--------------------------------------------------
-function den_flag,den_val,den_unc,doy_val,year,sigcut=sigcut,npix=npix
-if keyword_set(npix) then npix = npix else npix = 25 ; 25 minute check
-if keyword_set(sigcut) then sigcut=sigcut else sigcut = 5.00
-
-
-;get doy 
-doy = fix(doy_val[0])
-
-;start doy
-sdoy = doy - 1.
-;end doy
-edoy = doy + 2.
-
-ldoy = leap_check(year)
-
-case 1 of
-    (sdoy lt 1): begin
-;If first doy start search with last day of previous year
-        syear = year-1
-        sdoy = leap_check(year)
-        load_plasma,syear,sdoy,sdoy+1,/wind,doy=wdoy1,den=wden1
-        load_plasma,year,1,edoy,/wind,doy=wdoy2,den=wden2
-        wdoy = [wdoy1-sdoy,wdoy2]
-        print,wdoy
-        wden = [wden1,wden2]
-    end
-;If last doy end search with first day of next year        
-    (edoy gt ldoy+1): begin
-        load_plasma,year,doy,sdoy,/wind,doy=wdoy1,den=wden1
-        load_plasma,eyear,1,2,/wind,doy=wdoy2,den=wden2
-        wdoy = [wdoy1,wdoy2+sdoy]
-        wden = [wden1,wden2]
-    end
-;No year break just use load plasma
-    else: load_plasma,year,sdoy,edoy,/wind,doy=wdoy,den=wden
-endcase
-     
-;time offset between WIND and DSCOVR
-dtime = chi_min_time(wdoy,wden,doy_val,den_val,den_unc,span=span,samp=samp)
-
-;Difference between observed DSCOVR and interpolated WIND data
-wind_den = interpol(wden,wdoy,doy_val+dtime[0])
-del_den = wind_den-den_val
-
-
-;The difference quoted as a n-sigma uncertainty
-sig_den = abs(del_den)/den_unc
-
-;where the measured uncertainty is 5 time greater than the DSCOVR WIND difference
-bad_den = where(sig_den gt sigcut)
-
-;create array groups for areas where the density is 5 times greater than the unc.
-;for an extended period (npix)
-if n_elements(size(bad_den)) gt 3 then windcut = grp_obs(bad_den,npix) else windcut = -9999.0
-
-;compute the array values to return to the main program
-;;if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
-;;
-;;;print information to make sure its working properly (hint it is not)
-;if n_elements(size(windcut)) gt 3 then print,sig_den[windcut],npix,sigcut
-
-;check to see the median value inside the block of values
-
-return,windcut
-end
-
-;--------------------------------------------------
-;
-;USAGE
 ;grp = grp_obs(y,npix)
 ;
 ;COMMENTS
@@ -269,6 +194,89 @@ return,grp
 end
 
 
+
+
+;--------------------------------------------------
+;
+;USAGE
+;replace = den_flag(den_val,den_err,doy_val,sigcut=sigcut,npix=npix)
+;
+;COMMENTS
+;Sends flag for densities which differ by sigcut*measures_sigma from WIND
+;
+;--------------------------------------------------
+function den_flag,den_val,den_unc,doy_val,year,sigcut=sigcut,npix=npix
+if keyword_set(npix) then npix = npix else npix = 25 ; 25 minute check
+if keyword_set(sigcut) then sigcut=sigcut else sigcut = 5.00
+
+
+;get doy 
+doy = fix(doy_val[0])
+
+;start doy
+sdoy = doy - 1.
+;end doy
+edoy = doy + 2.
+
+ldoy = leap_check(year)
+
+
+case 1 of
+    (sdoy lt 1): begin
+;If first doy start search with last day of previous year
+        syear = year-1
+        sdoy = leap_check(year)
+        load_plasma,syear,sdoy,sdoy+1,/wind,doy=wdoy1,den=wden1
+        load_plasma,year,1,edoy,/wind,doy=wdoy2,den=wden2
+        wdoy = [wdoy1-sdoy,wdoy2]
+        wden = [wden1,wden2]
+    end
+;If last doy end search with first day of next year        
+    (edoy gt ldoy+1): begin
+        load_plasma,year,doy,sdoy,/wind,doy=wdoy1,den=wden1
+        load_plasma,year+1,1,2,/wind,doy=wdoy2,den=wden2
+        wdoy = [wdoy1,wdoy2+sdoy]
+        wden = [wden1,wden2]
+    end
+;No year break just use load plasma
+    else: load_plasma,year,sdoy,edoy,/wind,doy=wdoy,den=wden
+endcase
+     
+;time offset between WIND and DSCOVR
+dtime = chi_min_time(wdoy,wden,doy_val,den_val,den_unc,span=span,samp=samp)
+
+;Difference between observed DSCOVR and interpolated WIND data
+wind_den = interpol(wden,wdoy,doy_val+dtime[0])
+del_den = (den_val-wind_den)/wind_den
+
+
+;The difference quoted as a n-sigma uncertainty
+;sig_den = abs(del_den)/den_unc
+
+;Use the Chauvenet's Criterion where sigma and <mu> come from the mission long comparision with WIND
+med_off = 6.3/100.
+sig_off = 26.8/100.
+bad_tst = n_elements(del_den)*erfc(abs(del_den-med_off)/sig_off)
+bad_den = where(bad_tst lt 0.500000) ; Assume a gaussian distribution
+print,n_elements(bad_den)
+
+;where the measured uncertainty is 5 time greater than the DSCOVR WIND difference
+;bad_den = where(sig_den gt sigcut)
+
+;create array groups for areas where the density is 5 times greater than the unc.
+;for an extended period (npix)
+if n_elements(size(bad_den)) gt 3 then windcut = grp_obs(bad_den,npix) else windcut = -9999.0
+
+;compute the array values to return to the main program
+;;if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
+;;
+;;;print information to make sure its working properly (hint it is not)
+;if n_elements(size(windcut)) gt 3 then print,sig_den[windcut],npix,sigcut
+
+;check to see the median value inside the block of values
+
+return,windcut
+end
 
 ;--------------------------------------------------
 ;
@@ -591,7 +599,7 @@ user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
 ;check for density values 5 sigma away from WIND for more than 25 minutes
-dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=2,npix=25)
+dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=2,npix=15)
 if n_elements(size(dens_check)) gt 3 then dqf_val[dens_check] = 2
 
 ;fix for solar wind's aberration in Y component
