@@ -226,13 +226,14 @@ dqf = root.dqf.dat
 ; Set up plots Section 1.2
 ;============================================================
 
-loadct,12
 ;device,decompsed=0
-device,retain=2 ;prevent from plotting empty windows
+;device,retain=2 ;prevent from plotting empty windows
 
 ;image size
 
-set_plot,'X'
+set_plot,'Z'
+device,set_resolution=[1500,1000],decomposed=0,set_pixel_depth=24
+loadct,12
 ;device,xsize=8.5,ysize=11.0,/inches
 !p.thick=4
 !x.thick=3
@@ -256,8 +257,8 @@ jwdoy = double(julday(1,1,year,0,0,0)+(wdoy-1)) ; WIND
 ;setup format for plots
 dummy = label_date(date_format=['%H:%I'])
 ;set xrange for plots
-twoh = 0.083333333333333333333333
-xrange = [min(jddoy)-twoh,max(jddoy)+twoh] ;pad 2hours
+twoh = double(0.083)
+xrange = [min(jddoy)-twoh,max(jddoy)+0.084333] ;pad 2hours
 !X.range = xrange
 !X.style = 1
 !X.ticks = 14
@@ -265,6 +266,8 @@ xrange = [min(jddoy)-twoh,max(jddoy)+twoh] ;pad 2hours
 !X.ticklen = 0.05
 !X.ticks = 14
 !Y.ticks = 4
+xticks = ['22:00','00:00','02:00','04:00','06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00','00:00','02:00']
+
 
 xlabfmt = '("DOY=",I03,"/",I4)'
 
@@ -358,7 +361,9 @@ oplot,jddoy,dz,psym=8,color=dcol
 
 ffmt = '("../out_plots/compare_wind_dsc_ontop_",I4,"_",I03,".png")'
 fname = string([year,doy],format=ffmt)
-write_png,fname,tvrd(/true)
+TVLCT,r,g,b,/Get
+write_png,fname,tvrd(/true),r,g,b
+;write_png,fname,tvrd(/true)
 ;device,/close
 
 
@@ -519,6 +524,8 @@ if n_elements(out) gt 2 then oplot,ddoy[out],dwdz[out],psym=8,color=200
 
 ffmt = '("../out_plots/compare_wind_dsc_delta_",I4,"_",I03,".png")'
 fname = string([year,doy],format=ffmt)
-write_png,fname,tvrd(/true)
+
+TVLCT,r,g,b,/Get
+write_png,fname,tvrd(/true),r,g,b
 
 end
