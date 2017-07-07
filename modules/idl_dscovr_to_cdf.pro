@@ -257,17 +257,32 @@ dtime = chi_min_time(wdoy,wden,doy_val,den_val,den_unc,span=span,samp=samp)
 
 ;Difference between observed DSCOVR and interpolated WIND data
 wind_den = interpol(wden,wdoy,doy_val+dtime[0])
-del_den = (den_val-wind_den)/wind_den
+chk_den = where(den_val gt -9990.)
+del_den = (den_val[chk_den]-wind_den[chk_den])/wind_den[chk_den]
+;sig_off = den_unc[chk_den]/den_val[chk_den]
+
+;Calculate the moving average offset and measurement error
+del_off = ts_smooth(del_den,npix)
+sig_emp = ts_sigma(del_den,npix) ;emperical scatter
+sig_off = ts_smooth(den_unc[chk_den]/den_val[chk_den],npix)
+
+;combined measurement error and emperical uncertainty
+sig_off = sqrt(sig_emp^2+temporary(sig_off)^2)/sqrt(2.)
+
+;Do a 3 sigma rejection areas where average offset and uncertainty does not cross 0
+bad_den = where(abs(del_off)-sigcut*abs(sig_off) gt 0)
 
 
 ;The difference quoted as a n-sigma uncertainty
-;sig_den = abs(del_den)/den_unc
+;sig_den = abs(del_den[chk_den])/den_unc[chk_den]
 
 ;Use the Chauvenet's Criterion where sigma and <mu> come from the mission long comparision with WIND
-med_off = 6.3/100.
-sig_off = 26.8/100.
-bad_tst = n_elements(del_den)*erfc(abs(del_den-med_off)/sig_off)
-bad_den = where(bad_tst lt 0.500000) ; Assume a gaussian distribution
+;;;med_off = 6.3/100.
+;;;;sig_off = 26.8/100.
+;;;bad_tst = n_elements(del_den)*erfc(abs(del_den-med_off)/sig_off)
+;;;bad_den = where(bad_tst lt 0.500000) ; Assume a gaussian distribution
+
+
 print,n_elements(bad_den)
 
 ;where the measured uncertainty is 5 time greater than the DSCOVR WIND difference
@@ -276,6 +291,7 @@ print,n_elements(bad_den)
 ;create array groups for areas where the density is 5 times greater than the unc.
 ;for an extended period (npix)
 if n_elements(size(bad_den)) gt 3 then windcut = grp_obs(bad_den,npix) else windcut = -9999.0
+if n_elements(size(windcut)) gt 3 then windcut = chk_den[temporary(windcut)] else windcut = -9999.0
 
 ;compute the array values to return to the main program
 ;;if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
@@ -609,7 +625,7 @@ user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
 ;check for density values 5 sigma away from WIND for more than 25 minutes
-dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=2,npix=25)
+dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=3,npix=25)
 if n_elements(size(dens_check)) gt 3 then dqf_val[dens_check] = 2
 
 ;fix for solar wind's aberration in Y component
