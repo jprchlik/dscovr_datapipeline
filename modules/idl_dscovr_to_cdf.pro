@@ -628,7 +628,7 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
 ;set bad dqf_val where bad points exist
 ;Changed back from 3 to 2 for 2017/366 2017/07/14
 ;Changed back from 2 to 3 for good 2017/07/17
-if n_elements(size(badv)) gt 3 then dqf_val[badv] = 3
+if n_elements(size(badv)) gt 3 then dqf_val[badv] = 4
 
 ;check for Vx values 5 sigma away from the median
 user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
