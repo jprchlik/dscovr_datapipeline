@@ -105,11 +105,11 @@ end
 ;    samp = sampling fequence in minutes
 ;--------------------------------------------------
 
-function chi_min_time,wdoy,wd,ddoy,dd,ddd,span=span,samp=samp
-if keyword_set(span) then span = span else span = 15 ;span to loop +/- in minutes
+function chi_min_time,wdoy,wd,ddoy,dd,ddd,ispan=ispan,samp=samp
+if keyword_set(ispan) then ispan = ispan else ispan = 15 ;span to loop +/- in minutes
 if keyword_set(samp) then samp = samp else samp = 0.50 ; sampling fequency in minutes
 
-span = span/60./24. ;turn into fraction of a day
+span =ispan/60./24. ;turn into fraction of a day
 samp = samp/60./24. ;turn into fraction of a day
 
 ;array of offset to loop over
@@ -194,7 +194,6 @@ if bcnt gt 0 then begin
         ;prevent s_cut or e_cut from going out of bounds
         if s_cut lt 0 then s_cut=0
         if e_cut gt 1440 then e_cut=1440
-        print,s_cut,e_cut
         if i eq 0 then grp = findgen(fix(e_cut-s_cut)+1)+s_cut else grp = [temporary(grp),findgen(fix(e_cut-s_cut)+1)+s_cut]
     endfor
 endif else grp = -9999.0
@@ -215,7 +214,7 @@ end
 ;Sends flag for densities which differ by sigcut*measures_sigma from WIND
 ;
 ;--------------------------------------------------
-function den_flag,den_val,den_unc,doy_val,year,sigcut=sigcut,npix=npix
+function den_flag,vx_val,vx_unc,den_val,den_unc,doy_val,year,sigcut=sigcut,npix=npix
 if keyword_set(npix) then npix = npix else npix = 25 ; 25 minute check
 if keyword_set(sigcut) then sigcut=sigcut else sigcut = 5.00
 
@@ -236,54 +235,63 @@ case 1 of
 ;If first doy start search with last day of previous year
         syear = year-1
         sdoy = leap_check(year)
-        load_plasma,syear,sdoy,sdoy+1,/wind,doy=wdoy1,den=wden1
-        load_plasma,year,1,edoy,/wind,doy=wdoy2,den=wden2
+        load_plasma,syear,sdoy,sdoy+1,/wind,doy=wdoy1,den=wden1,vx=wvx1
+        load_plasma,year,1,edoy,/wind,doy=wdoy2,den=wden2,vx=wvx2
         wdoy = [wdoy1-sdoy,wdoy2]
         wden = [wden1,wden2]
+        wvx = [wvx1,wvx2]
     end
 ;If last doy end search with first day of next year        
     (edoy gt ldoy+1): begin
-        load_plasma,year,doy,sdoy,/wind,doy=wdoy1,den=wden1
-        load_plasma,year+1,1,2,/wind,doy=wdoy2,den=wden2
+        load_plasma,year,doy,sdoy,/wind,doy=wdoy1,den=wden1,vx=wvx1
+        load_plasma,year+1,1,2,/wind,doy=wdoy2,den=wden2,vx=wvx2
         wdoy = [wdoy1,wdoy2+sdoy]
         wden = [wden1,wden2]
+        wvx = [wvx1,wvx2]
     end
 ;No year break just use load plasma
-    else: load_plasma,year,sdoy,edoy,/wind,doy=wdoy,den=wden
+    else: load_plasma,year,sdoy,edoy,/wind,doy=wdoy,den=wden,vx=wvx
 endcase
      
 ;time offset between WIND and DSCOVR
-dtime = chi_min_time(wdoy,wden,doy_val,den_val,den_unc,span=span,samp=samp)
+dtime = chi_min_time(wdoy,wvx,doy_val,vx_val,vx_unc,ispan=25,samp=samp)
+print,dtime
 
 ;Difference between observed DSCOVR and interpolated WIND data
 wind_den = interpol(wden,wdoy,doy_val+dtime[0])
 chk_den = where(den_val gt -9990.)
-del_den = (den_val[chk_den]-wind_den[chk_den])/wind_den[chk_den]
+del_den = abs(den_val[chk_den]-wind_den[chk_den])/wind_den[chk_den]
 ;sig_off = den_unc[chk_den]/den_val[chk_den]
 
 ;Calculate the moving average offset and measurement error
 del_off = ts_smooth(del_den,npix)
-sig_emp = ts_sigma(del_den,npix) ;emperical scatter
+sig_emp = ts_sigma(del_den,npix)/del_den ;emperical scatter
+wnd_emp = ts_sigma(wind_den,npix)/wind_den ;emperical scatter in WIND data
 sig_off = ts_smooth(den_unc[chk_den]/den_val[chk_den],npix)
 
-;combined measurement error and emperical uncertainty
-sig_off = sqrt(sig_emp^2+temporary(sig_off)^2)/sqrt(2.)
-
-;Do a 3 sigma rejection areas where average offset and uncertainty does not cross 0
-bad_den = where(abs(del_off)-sigcut*abs(sig_off) gt 0)
-
+;print,sig_emp
+;print,wnd_emp
+;print,sig_off
+;
 
 ;The difference quoted as a n-sigma uncertainty
 ;sig_den = abs(del_den[chk_den])/den_unc[chk_den]
 
 ;Use the Chauvenet's Criterion where sigma and <mu> come from the mission long comparision with WIND
 ;;;med_off = 6.3/100.
-;;;;sig_off = 26.8/100.
+med_off = 26.8/100. ;median uncertainty
+med_off = wnd_emp;uncertainty in wind value
 ;;;bad_tst = n_elements(del_den)*erfc(abs(del_den-med_off)/sig_off)
 ;;;bad_den = where(bad_tst lt 0.500000) ; Assume a gaussian distribution
 
+;combined measurement error and emperical uncertainty
+sig_off = sqrt(sig_emp^2+temporary(sig_off)^2+med_off^2)/sqrt(3.)
 
-print,n_elements(bad_den)
+;Do a 3 sigma rejection areas where average offset and uncertainty does not cross 0
+bad_den = where(abs(del_off)-sigcut*abs(sig_off) gt 0)
+
+
+
 
 ;where the measured uncertainty is 5 time greater than the DSCOVR WIND difference
 ;bad_den = where(sig_den gt sigcut)
@@ -618,6 +626,8 @@ badv = where((vgse[0,*] lt -9998.) or (vgse[1,*] lt -9998.) or $
            )
 
 ;set bad dqf_val where bad points exist
+;Changed back from 3 to 2 for 2017/366 2017/07/14
+;Changed back from 2 to 3 for good 2017/07/17
 if n_elements(size(badv)) gt 3 then dqf_val[badv] = 3
 
 ;check for Vx values 5 sigma away from the median
@@ -625,7 +635,8 @@ user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
 ;check for density values 5 sigma away from WIND for more than 25 minutes
-dens_check = den_flag(root.N.data,root.N.uncertainty,root.time.data,year,sigcut=3,npix=25)
+;Commented out for 2016/366 doy on 2017/07/14
+dens_check = den_flag(root.VX.data,root.VX.uncertainty,root.N.data,root.N.uncertainty,root.time.data,year,sigcut=3,npix=45)
 if n_elements(size(dens_check)) gt 3 then dqf_val[dens_check] = 2
 
 ;fix for solar wind's aberration in Y component
