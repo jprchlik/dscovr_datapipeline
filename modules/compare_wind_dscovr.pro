@@ -32,6 +32,25 @@ p_err_y = [abs(err),-abs(err)]+yval
 
 end
 
+;===================================================
+;
+;Return newest version of file
+;
+;USAGE
+;new_file = new_ver(archive,file)
+;
+;COMMENTS
+;   Finds the most recent version of file to return
+;===================================================
+function new_ver,archive,file
+
+
+new_file = file_search(archive+file)
+if n_elements(size(new_file)) gt 3 then new_file = new_file[n_elements(new_file)-1]
+
+
+return,new_file
+end
 ;-------------------------------------------------
 ;
 ;USAGE
@@ -222,6 +241,31 @@ ddew= 1.E-3*sqrt(2.*kb/mp/root.THERMAL_TEMP.dat)*root.THERMAL_TEMP_DELTA.dat*0.5
 ;data quality flag
 dqf = root.dqf.dat
 
+
+
+
+;============================================================
+; Find Mag. data if avialable Section 1.1,1
+;============================= ===============================
+;Set up archive and file information for trajectory and magnetic field archives
+if keyword_set(marchive) then marchive=marchive else marchive='/crater/observatories/dscovr/plasmag/mag';set output cdf location
+marchive = marchive+'/'
+if keyword_set(mfilefmt) then mfilefmt=mfilefmt else mfilefmt = '(I4,"/dscovr_h0_mag_",I4,I02,I02,"_v*.cdf")'
+
+;find path for cdf file
+;mcdf = archive+string([year,year,mon,dom,v1],format=mfilefmt)
+
+;find path for orbital file
+mcdf = string([year,year,mon,dom],format=mfilefmt)
+mag_cdf = new_ver(marchive,mcdf)
+
+;make sure files exsits
+test_mag = file_test(mag_cdf)
+
+;if file exits read it n
+if (test_mag eq 1) then mag_cdf = read_mycdf("",mag_cdf,/all)
+
+
 ;============================================================
 ; Set up plots Section 1.2
 ;============================================================
@@ -367,9 +411,77 @@ write_png,fname,tvrd(/true),r,g,b
 ;device,/close
 
 
-
 ;============================================================
 ;Section 1.2.2
+;Find DSCOVR magnetic field data
+;============================================================
+
+;If mag cdf file exists create plots
+if (test_mag eq 1) then begin
+
+    ;set up arrays for spanning each plot range
+    yb0 = .08
+    yt5 = .95
+    ysp = yt5-yb0 ;obsevation span
+    psz = ysp/4.  ; size of each oplot
+    
+    
+    ;set up plot positions for each plot
+    plot2a = [.1,yb0+3.*psz,.95,yb0+4.*psz]
+    plot3a = [.1,yb0+2.*psz,.95,yb0+3.*psz]
+    plot4a = [.1,yb0+1.*psz,.95,yb0+2.*psz]
+    plot5a = [.1,yb0+0.*psz,.95,yb0+1.*psz]
+
+    ;Good quailty magnometer flag
+    good_mag = where(mag_cdf.flag1.dat eq 0)
+
+    ;convert cdf epoch to julian days
+    mag_time = CDF_EPOCH_TOJULDAYS(mag_cdf.epoch1.dat)
+
+    plot,mag_time[good_mag],mag_cdf.b1f1.dat[good_mag],psym=6,color=0, $
+     ytitle='|B| [nT]',background=255,charsize=2,$
+     font=1,charthick=3,position=plot2a,xtickformat="(A1)"
+    ;for i=0L,n_elements(good_mag)-1 do begin
+    ;    error_bars,mag_time[good_mag[i]],mag_cdf.b1f1.dat[good_mag[i]],mag_cdf.b1sdf1.dat[good_mag[i]],ex,ey
+    ;    oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    ;endfor
+
+    plot,mag_time[good_mag],mag_cdf.b1gse.dat[0,good_mag],psym=6,color=0, $
+     ytitle='Bx [nT]',background=255,charsize=2,$
+     font=1,charthick=3,position=plot3a,/NOERASE,xtickformat="(A1)"
+    ;for i=0L,n_elements(good_mag)-1 do begin
+    ;    j = good_mag[i]
+    ;    error_bars,mag_time[j],mag_cdf.b1gse.dat[0,j],mag_cdf.b1sdgse.dat[0,j],ex,ey
+    ;    oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    ;endfor
+
+    plot,mag_time[good_mag],mag_cdf.b1gse.dat[1,good_mag],psym=6,color=0, $
+     ytitle='By [nT]',background=255,charsize=2,$
+     font=1,charthick=3,position=plot4a,/NOERASE,xtickformat="(A1)"
+    ;for i=0L,n_elements(good_mag)-1 do begin
+    ;    j = good_mag[i]
+    ;    error_bars,mag_time[j],mag_cdf.b1gse.dat[1,j],mag_cdf.b1sdgse.dat[1,j],ex,ey
+    ;    oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    ;endfor
+
+    plot,mag_time[good_mag],mag_cdf.b1gse.dat[2,good_mag],psym=6,color=0, $
+     ytitle='Bz [nT]',xtitle=string([doy,year],format=xlabfmt),background=255,charsize=2,$
+     font=1,charthick=3,position=plot5a,/NOERASE,xtickformat='label_date'
+    ;oplot,mag_time[good_mag],mag_cdf.b1gse.dat[2,good_mag],psym=6
+    ;for i=0L,n_elements(good_mag)-1 do begin
+    ;    j = good_mag[i]
+    ;    error_bars,mag_time[j],mag_cdf.b1gse.dat[2,j],mag_cdf.b1sdgse.dat[2,j],ex,ey
+    ;    oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    ;endfor
+
+    mfmt = '("../out_plots/compare_wind_dsc_ontop_mag_",I4,"_",I03,".png")'
+    fname = string([year,doy],format=mfmt)
+    TVLCT,r,g,b,/Get
+    write_png,fname,tvrd(/true),r,g,b
+
+endif
+;============================================================
+;Section 1.2.3
 ;Find DSCOVR-WIND offsets
 ;============================================================
 ;WIND data for +/- 1 day from DSCOVR span (allows movement data for correlation
