@@ -259,7 +259,38 @@ print,dtime
 
 ;Difference between observed DSCOVR and interpolated WIND data
 wind_den = interpol(wden,wdoy,doy_val+dtime[0])
-chk_den = where(den_val gt -9990.)
+
+;get the wind time sampling
+wind_sam = wdoy[1:n_elements(wdoy)-1]-wdoy[0:n_elements(wdoy)-2]
+
+;reject spacing (time exclude from density flagging)
+day_frac_20min = 20./60./24. ;convert 20 minute wind spacing to day fraction
+
+;find wind dropouts
+wind_drop = where(wind_sam gt day_frac_20min)
+
+;time passes no wind data check
+pass_time = intarr(n_elements(wind_den))+1
+
+
+;change pass_time to 0 if doy_val (Wind sampling time from DSCOVR) is in bad range
+if n_elements(size(wind_drop)) gt 3 then begin
+    for i=0,n_elements(wind_drop)-1 do begin
+        ;starting bad time
+        s_bad = wdoy[wind_drop[i]]
+        ;ending bad time
+        e_bad = wdoy[wind_drop[i]+1]
+        ;get where DSCOVR observations are in that time frame
+        rej_times = where((doy_val ge s_bad) and (doy_val le e_bad))
+        ;update pass time check
+        if n_elements(size(rej_times)) gt 3 then pass_time[rej_times] = 0
+    endfor
+endif
+
+
+
+; reject time from flagging where wind is not observing or DSCOVR already flagged the data
+chk_den = where((den_val gt -9990.) and (pass_time eq 1))
 del_den = abs(den_val[chk_den]-wind_den[chk_den])/wind_den[chk_den]
 ;sig_off = den_unc[chk_den]/den_val[chk_den]
 
