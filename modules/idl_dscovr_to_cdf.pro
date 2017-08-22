@@ -243,19 +243,22 @@ case 1 of
     end
 ;If last doy end search with first day of next year        
     (edoy gt ldoy+1): begin
-        load_plasma,year,doy,sdoy,/wind,doy=wdoy1,den=wden1,vx=wvx1
+        
+        load_plasma,year,sdoy,doy,/wind,doy=wdoy1,den=wden1,vx=wvx1
         load_plasma,year+1,1,2,/wind,doy=wdoy2,den=wden2,vx=wvx2
-        wdoy = [wdoy1,wdoy2+sdoy]
+        wdoy = [wdoy1,wdoy2+wdoy1]
         wden = [wden1,wden2]
         wvx = [wvx1,wvx2]
     end
 ;No year break just use load plasma
     else: load_plasma,year,sdoy,edoy,/wind,doy=wdoy,den=wden,vx=wvx
 endcase
+
+
      
 ;time offset between WIND and DSCOVR
 dtime = chi_min_time(wdoy,wvx,doy_val,vx_val,vx_unc,ispan=25,samp=samp)
-print,dtime
+print,'Time offset',dtime
 
 ;Difference between observed DSCOVR and interpolated WIND data
 wind_den = interpol(wden,wdoy,doy_val+dtime[0])
@@ -417,6 +420,56 @@ bad = where(val lt idlfil+1.)
 if n_elements(size(bad)) gt 3 then val[bad]= cdffil
 return,val
 end
+
+;--------------------------------------------------
+;Function takes root idl structure and observed epoch and unflags good days
+;USAGE
+;root = remove(remove_bad_times,root,obsepoch)
+;--------------------------------------------------
+function remove_bad_flags,root,obsepoch
+pasfile = '../rejected_times/reject_flag.dat' ; file containing formatted times to not flag for density 
+;create variables to hold year, doy, hour, min
+syear = 0 & sdoy = 0 & sh = 0 & sm = 0
+eyear = 0 & edoy = 0 & eh = 0 & em = 0
+
+;create empty epoch arrays
+strepoch = MAKE_ARRAY(1,/double)
+endepoch = MAKE_ARRAY(1,/double)
+;open file
+openr,lun1,pasfile,/get_lun
+;skip first two lines
+skip_lun,lun1,2,/LINES
+
+;read format
+rfmt = '(I4,1x,I03,1x,I02,1x,I02,1x,I4,1x,I03,1x,I02,1x,I02)'
+;open bad file 
+WHILE NOT EOF(lun1) DO BEGIN & $
+    readf, lun1,format=rfmt,syear,sdoy,sh,sm,eyear,edoy,eh,em & $
+    cdf_tt2000,tstrepoch,syear,0,sdoy,sh,sm,/compute_epoch & $;compute cdf epoch time for bad start
+    cdf_tt2000,tendepoch,eyear,0,edoy,eh,em,/compute_epoch & $;compute cdf epoch time for bad end
+    strepoch = [strepoch,tstrepoch] & $
+    endepoch = [endepoch,tendepoch] & $
+ENDWHILE
+;close file
+CLOSE,lun1 
+Free_lun,lun1
+
+; lop off padding 0
+strepoch = strepoch[1:*]
+endepoch = endepoch[1:*]
+
+;loop over pass times and replace with fill dqf of 0 (good)
+for i=0,n_elements(strepoch)-1 do begin
+
+;values in time range
+    rep = where((obsepoch ge strepoch[i]) and (obsepoch le endepoch[i]) and (root eq 2)); data quality flag for density (DQF = 2)
+
+endfor
+
+
+return,rep
+end
+
 
 ;--------------------------------------------------
 ;Function takes root idl structure and observed epoch and send fill value to bad values
@@ -665,10 +718,15 @@ if n_elements(size(badv)) gt 3 then dqf_val[badv] = 4
 user_check = sig_flag(root.VX.data,root.VX.uncertainty,sigcut=5,npix=2)
 if n_elements(size(user_check)) gt 3 then dqf_val[user_check] = 1
 
-;check for density values 5 sigma away from WIND for more than 25 minutes
+;check for density values 5 sigma away from WIND for more than 45 minutes
 ;Commented out for 2016/366 doy on 2017/07/14
-dens_check = den_flag(root.VX.data,root.VX.uncertainty,root.N.data,root.N.uncertainty,root.time.data,year,sigcut=3,npix=45)
+dens_check = den_flag(root.VX.data,root.VX.uncertainty,root.N.data,root.N.uncertainty,root.time.data,year,sigcut=3.0,npix=45)
 if n_elements(size(dens_check)) gt 3 then dqf_val[dens_check] = 2
+
+
+;Replaced confirmed okay density flag times with good flag
+verf_check= remove_bad_flags(dqf_val,obsepoch)
+if n_elements(size(verf_check)) gt 3 then dqf_val[verf_check] = 0
 
 ;fix for solar wind's aberration in Y component
 ;solab = 29.78 ;km/s
