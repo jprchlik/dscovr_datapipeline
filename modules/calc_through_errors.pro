@@ -48,6 +48,7 @@ for i=start,ender-1 do begin
         (clobber eq 1): dsc_advanced_kp_fit,year,doy,curv,/save,/clobber 
         ;if clobber not set and reflag not set run fitting on days without idl save files (skip previously computed days)
         ((clobber eq 0) and (reflag eq 0)):  dsc_advanced_kp_fit,year,doy,curv,/save
+        ;if clobber not set and reflag set just restore idl save file and run flagging procedure
         ((clobber eq 0) and (reflag eq 1)):  begin
             idl_dscovr_to_cdf,year,doy,curv
             compare_wind_dscovr,year,doy,curv
