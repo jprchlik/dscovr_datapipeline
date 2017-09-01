@@ -260,7 +260,7 @@ end
 ;--------------------------------------------------
 ;
 ;USAGE
-;replace = sig_replace,x,y,npix=npix,sigcut=sigcut,tol=tol
+;replace = sig_replace(x,y,npix=npix,sigcut=sigcut,tol=tol)
 ;
 ;COMMENTS
 ;Sends replacement array for values which signficantly differ from the running median
@@ -1224,7 +1224,7 @@ moments_1min = fltarr(4, nspec)
 ok = where(f gt 0 and f lt 10, nok)
 temp = f[ok]
 stemp = sort(temp)
-yrange = [-0.02, temp[stemp[0.99*nok]]]
+yrange = [-0.1, temp[stemp[0.99*nok]]]
 xrange = [200, 1200]
 xtickv = [200, 250, 300, 350, 400, 450, 500, 550, $
           600, 650, 700, 750, 800, 850, 900, 950, $
