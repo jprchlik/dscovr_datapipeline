@@ -459,7 +459,7 @@ end
 
 ; ---------------------------------------------------------------------
 ;
-; SUBROUTINE for decimating  oversampled smoothed data onto 1 minute grid
+; SUBROUTINE for decimating  oversampled smoothed data onto 15 pixel grid
 ;
 ; ---------------------------------------------------------------------
 pro regrid_1minute, invars, outvars, theday, doy, outdoy=outdoy, fillval=fillval
@@ -474,6 +474,59 @@ pro regrid_1minute, invars, outvars, theday, doy, outdoy=outdoy, fillval=fillval
 
  for i = 0, num_vars - 1 do $
     outvars[*, i] = interpol(median(reform(invars[*, i]), 15), doy, doy_grid)
+    
+;
+minutes = round((doy - min(round(doy)))*24.*60.)
+unique_minutes = minutes[uniq(minutes)]
+
+; Here's a little differencing algorithm
+a = minutes_grid
+b = unique_minutes
+mina = Min(a, Max=maxa)
+minb = Min(b, Max=maxb)
+IF (minb GT maxa) OR (maxb LT mina) THEN diff= a ;No intersection...
+r = Where((Histogram(a, Min=mina, Max=maxa) NE 0) AND $
+          (Histogram(b, Min=mina, Max=maxa) EQ 0), count)
+IF count eq 0 THEN diff =-1 ELSE diff= r + mina
+
+; r contains the values in minutes_grid that aren't present in the 
+; dscovr unique minutes. These are the ones we need to black out.
+grid_tofill = r
+if not keyword_set(fillval) then fillval = -9999.99
+if r[0] ne (-1) then outvars[r, *] = fillval
+outdoy = doy_grid
+
+end
+
+; ---------------------------------------------------------------------
+;
+; SUBROUTINE for decimating  oversampled smoothed data onto 1 minute grid
+;
+; ---------------------------------------------------------------------
+pro regrid_1minute_phys, invars, outvars, theday, doy, outdoy=outdoy, fillval=fillval
+
+; We need to filter out bad points, and resample onto an appropriate grid
+ num_minutes = 24.*60.
+ minutes_grid = lindgen(num_minutes) ; this is minutes from 00:00 on the first day of the selection
+ doy_grid = min(fix(theday)) + minutes_grid/(24.*60.)
+ num_vars = n_elements(invars[0, *])
+
+;Start with fill value
+ outvars = fltarr(num_minutes, num_vars) -9999.99
+
+;Sample at a 15 interval
+; for i = 0, num_vars - 1 do $
+;    outvars[*, i] = interpol(median(reform(invars[*, i]), 15), doy, doy_grid)
+
+;Sample at 1 minute cadence 
+;Added 2017/09/01 J. Prchlik
+for i = 0, num_minutes-1 do begin
+    ;Get where minutes are in 1 minute range range
+    this_min = where((doy ge doy_grid[i]) and (doy lt doy_grid[i]+1./(24.*60.)))
+    ;make sure this_min(ute) contains data
+    ;then store minimum in time range
+    if n_elements(size(this_min)) gt 3 then outvars[i,*] = median(invars[this_min,*],dimension=1)
+endfor
     
 ;
 minutes = round((doy - min(round(doy)))*24.*60.)
