@@ -500,6 +500,54 @@ end
 
 ; ---------------------------------------------------------------------
 ;
+; FUNCTION for median smoothing data onto 1 minute grid
+;
+; ---------------------------------------------------------------------
+function smooth_1minute_phys, invars, theday, doy,al=al
+
+print,size(invars)
+;resampling number
+resamp = n_elements(doy)
+n_vars = n_elements(invars[*, 0])
+
+print,resamp,n_vars
+
+;Start with fill value
+if n_vars gt 1 then outvars = fltarr(n_vars,resamp) -9999.99 $
+else outvars = fltarr(resamp) - 9999.99
+
+
+;which dimension to take median on
+if n_vars gt 1 then medd = 2 else medd = 1 
+
+print,size(outvars)
+
+;Add averaging length array
+al = fltarr(resamp)
+
+;running window (fraction of doy)
+num_minutes = 24.*60.
+res = 1./num_minutes
+
+;Sample at 1 minute cadence 
+;Added 2017/09/12 J. Prchlik
+for i = 0, resamp-1 do begin
+    ;Get where minutes are in 1 minute range range
+    this_min = where((doy ge doy[i]-res/2.) and (doy lt doy[i]+res/2.))
+    ;make sure this_min(ute) contains data
+    ;then store minimum in time range
+    if n_elements(size(this_min)) gt 3 then begin
+        if n_vars eq 2 then outvars[*,i] = median(invars[*,this_min],dimension=2) $
+        else outvars[i] = median(invars[this_min])
+        al[i] = n_elements(this_min)
+    endif
+endfor
+print,size(outvars)
+return,outvars
+end
+
+; ---------------------------------------------------------------------
+;
 ; SUBROUTINE for decimating  oversampled smoothed data onto 1 minute grid
 ;
 ; ---------------------------------------------------------------------
@@ -514,15 +562,11 @@ pro regrid_1minute_phys, invars, outvars, theday, doy, outdoy=outdoy, fillval=fi
 ;Start with fill value
  outvars = fltarr(num_minutes, num_vars) -9999.99
 
-;Sample at a 15 interval
-; for i = 0, num_vars - 1 do $
-;    outvars[*, i] = interpol(median(reform(invars[*, i]), 15), doy, doy_grid)
-
 ;Sample at 1 minute cadence 
 ;Added 2017/09/01 J. Prchlik
 for i = 0, num_minutes-1 do begin
     ;Get where minutes are in 1 minute range range
-    this_min = where((doy ge doy_grid[i]) and (doy lt doy_grid[i]+1./(24.*60.)))
+    this_min = where((doy ge doy_grid[i]) and (doy lt doy_grid[i]+1./num_minutes))
     ;make sure this_min(ute) contains data
     ;then store minimum in time range
     if n_elements(size(this_min)) gt 3 then outvars[i,*] = median(invars[this_min,*],dimension=1)
@@ -1142,11 +1186,25 @@ endelse
 ; (3.5) calculate 1min averages. a 3pt median spike filter 
 ;       might also be a good idea somewhere in here, 
 ;       except we don't really see a lot of actual current spikes
+
+;Commenented out by J. Prchlik (2017/09/12) in order to use real 1 minute averages
 if not keyword_set(averaging_length) then averaging_length = 15
 ia1 = smooth(ia, [0, averaging_length])
 ib1 = smooth(ib, [0, averaging_length])
 ic1 = smooth(ic, [0, averaging_length])
 itot1 = ia1+ib1+ic1
+
+; Use a running 1 minute median value instead of the actual value for each sensor
+thisdoy = spec_jd - julday(1, 1, year, 0, 0, 0) + 1.
+
+;Added by J. Prchlik (2017/09/12) to use 1 minute running medians
+;Start with fill value
+;Stores the 1 minute running median
+;for each sensor
+;ia1 = smooth_1minute_phys(ia, doy,thisdoy, al=averaging_length)
+;ib1 = smooth_1minute_phys(ib, doy,thisdoy)
+;ic1 = smooth_1minute_phys(ic, doy,thisdoy)
+;itot1 = ia1+ib1+ic1
 
 ; (4) GET EFFECTIVE AREAS AND FLOW ANGLES
 ; (4.1) full resolution
@@ -1175,10 +1233,19 @@ dphi = sqrt((phis - phi)^2)
 dtheta = sqrt((thetas - theta)^2)
 ; uncertainty on the 1min averages include that and <1 min variance
 ; the latter is an uncertainty on the mean, so divide by sqrt(n)
+;Commented to use the new function smooth_1minute_phys J. Prchlik (2017/09/12)
 phi1_sq = smooth(phi^2, averaging_length)
 sigphi1 = sqrt(phi1_sq - smooth(phi, averaging_length)^2)/sqrt(averaging_length)
 theta1_sq = smooth(theta^2, averaging_length)
 sigtheta1 = sqrt(theta1_sq - smooth(theta, averaging_length)^2)/sqrt(averaging_length)
+
+;Use the new function smooth_1minute_phys J. Prchlik (2017/09/12)
+;phi1_sq = smooth_1minute_phys(phi^2, doy, thisday)
+;sigphi1 = sqrt(phi1_sq - smooth_1minute_phys(phi, doy, thisday)^2)/sqrt(averaging_length)
+;theta1_sq = smooth_1minute_phys(theta^2, doy, thisday)
+;sigtheta1 = sqrt(theta1_sq - smooth_1minute_phys(theta, doy, thisday)^2)/sqrt(averaging_length)
+
+
 dphi1 = sqrt(dphi^2 + sigphi1^2)
 dtheta1 = sqrt(dtheta^2 + sigtheta1^2)
 
@@ -1205,8 +1272,13 @@ eA1 = q0*aeff1 ## (1.+fltarr(64))
 f1 = itot1/(eA1*v*dv)
 
 ; (7) CALCULATE THE CHANNEL VARIANCES
+;Update to 1 minute average
 m_fsq =  smooth(f^2, [0,averaging_length])
 mf_sq = smooth(f, [0,averaging_length])^2
+;Updated to 1 minute average J. Prchlik (2017/09/12)
+;m_fsq =  smooth_1minute_phys(f^2, doy,thisday)
+;mf_sq =  smooth_1minute_phys(f, doy, thisday)^2
+
 sigf1 = sqrt(m_fsq - mf_sq)
 
 
