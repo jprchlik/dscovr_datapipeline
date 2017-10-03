@@ -538,10 +538,11 @@ for i = 0L, resamp-1 do begin
     ;make sure this_min(ute) contains data
     ;then store minimum in time range
     if n_elements(size(this_min)) gt 3 then begin
+        ;Switch from using median to using mean J. Prchlik 2017/10/02
         if ((n_elements(inputsize) eq 5) and (cnt_use gt 1)) then $
-            outvars[*,i] = median(invars[*,this_min],dimension=2) 
+            outvars[*,i] = total(invars[*,this_min],2)/float(cnt_use) 
         if ((n_elements(inputsize) eq 4) and (cnt_use gt 1)) then $
-            outvars[i] = median(invars[this_min])
+            outvars[i] = mean(invars[this_min])
         if keyword_set(al_check) then avel[i] = n_elements(this_min)
     endif
 endfor
