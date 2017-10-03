@@ -393,6 +393,7 @@ dux = dupar
 duy = duperp
 duz = duperp
 
+
 ; fill bad data 
 if not keyword_set(fillval) then fillval = -9999.
 fill = where(fitpars[1, *] lt -3000.0, nfill)
@@ -1275,7 +1276,7 @@ dtheta = sqrt((thetas - theta)^2)
 ;averaging length is an array of values used for the median 
 phi1_sq = smooth_1minute_phys(phi^2, doy, thisdoy)
 sigphi1 = sqrt(phi1_sq - smooth_1minute_phys(phi, doy, thisdoy)^2)/sqrt(averaging_length)
-theta1_sq = smooth_1minute_phys(theta^2, doy, thisday)
+theta1_sq = smooth_1minute_phys(theta^2, doy, thisdoy)
 sigtheta1 = sqrt(theta1_sq - smooth_1minute_phys(theta, doy, thisdoy)^2)/sqrt(averaging_length)
 
 
@@ -1465,22 +1466,13 @@ if keyword_set(wind_show) then begin
     ;Put dt into every element
     wi_dt = [wi_dt,wi_dt[n_elements(wi_dt)-1]] ## (1+fltarr(31))
 
+    ;Get julian day fraction for each observed wind spectrum
     wi_jd = double(double(wi_hr/24.) + double(julday(1,1,year,0,0,0))+double(doy)-double(1.)) ; covert spectrum time into Julian Day
     wi_dchan = alog10(wi_v/168.39)/alog10(1.0324)
 
     ;Number of wind observations per day
     wnspec = n_elements(wi_jd)
-    ;get change in velocity array for wind
-    ;wdv = wi_v[1:n_elements(wi_v[*,0])-1,0]-wi_v[0:n_elements(wi_v[*,0])-2,0]
 
-  
-    ;Fix velocity jump to 172.5 at the end of the channel scan and replace
-    ; with last good value
-    ;wdv[n_elements(wdv)-2] = wdv[n_elements(wdv)-3]
-
-    ;append last velocity width on last channel element
-    ;wdv = [wdv,wdv[n_elements(wdv)-1]] 
-    
 
     q0 = 1.6021892d-7 ; picocoulombs
     ;average wind effective area is 35cm^2
@@ -1489,6 +1481,7 @@ if keyword_set(wind_show) then begin
     ; Wind has 31 velocity channels
     weA = q0*waeff*(1.+fltarr(wnspec)) ## (1.+fltarr(31)); picocoulomb*cm^3/km
     wv = wi_v
+    ; Change in velocity channels
     wdv = wi_dv
 
     ;Covert spectrum into rdf format = [velocity,time]
@@ -1808,10 +1801,6 @@ if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and co
     idl_dscovr_to_cdf,fix(yyyy),fix(ddd),version ;create 1minute cdf files based on doy and year
     compare_wind_dscovr,fix(yyyy),fix(ddd),version ;create plot comparing 1minute dscovr data to wind observations
 ;setup idl structures
-
-
-
-
 endif
 
 if keyword_set(hold) then stop
