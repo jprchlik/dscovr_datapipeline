@@ -37,7 +37,7 @@ for i=start,ender-1 do begin
 ;Get doy of observation
     doy = fix(i-JULDAY(01,01,year))+1
 ;Check if day current day is within auto recal regime unless reflag is set
-    if ((i gt recom) and (reflag eq 0)) then clobber=1 else clobber=0
+    if ((i gt recom) and (reflag eq 0) ) then clobber=1 
 
 ;Run dsc_advanced_kp_fit 
     dstr = string([year,doy],format=dfmt) 
