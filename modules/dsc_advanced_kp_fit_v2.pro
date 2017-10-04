@@ -1,9 +1,9 @@
 ; dsc_advanced_kp_fit_v2
 ;
-; This is a fork from dsc_advanced_kp_fit.pro (11/14/2016). This
+; This is a fork from dsc_advanced_kp_fit_v2_1min.pro (09/13/2017). This
 ; version is intended to include
 ;
-; (1) 1 minute and high res analysis together
+; (1) 1 minute (dynamical sampled at 1 minute) and high res analysis together
 ; (2) integrated uncertainty/error analysis
 ;
 ; This retires the "mode" and "refine" keywords and settings in the previous version
@@ -34,7 +34,7 @@
 ;
 ; USAGE
 ; dsc_advanced_kp_fit, year, doy, version, show=show, hold=hold, $
-;                         save=save, rezero=rezero, $
+;                         save=save, rezero=rezero, wind_show=wind_show$
 ;                         averaging_length = averaging_length, $
 ;                         flybacks=flybacks, $
 ;                         neg_offset=neg_offset, verbose=verbose, $
@@ -393,6 +393,7 @@ dux = dupar
 duy = duperp
 duz = duperp
 
+
 ; fill bad data 
 if not keyword_set(fillval) then fillval = -9999.
 fill = where(fitpars[1, *] lt -3000.0, nfill)
@@ -500,30 +501,31 @@ end
 
 ; ---------------------------------------------------------------------
 ;
-; FUNCTION for median smoothing data onto 1 minute grid
+; FUNCTION for mean smoothing data onto 1 minute grid
 ;
 ; ---------------------------------------------------------------------
-function smooth_1minute_phys, invars, theday, doy,al=al
+function smooth_1minute_phys, invars, theday, doy,avel=avel,al_check=al_check
 
-print,size(invars)
 ;resampling number
 resamp = n_elements(doy)
 n_vars = n_elements(invars[*, 0])
 
-print,resamp,n_vars
+inputsize = size(invars)
 
-;Start with fill value
-if n_vars gt 1 then outvars = fltarr(n_vars,resamp) -9999.99 $
-else outvars = fltarr(resamp) - 9999.99
+;Change output shape based on input array shape
+;Keep type consistent (double or single precision)
+case 1 of
+    ((n_elements(inputsize) eq 5) and (inputsize[3] eq 4)):  outvars = fltarr(inputsize[1],inputsize[2])-9999.99
+    ((n_elements(inputsize) eq 5) and (inputsize[3] eq 5)):  outvars = dblarr(inputsize[1],inputsize[2])-9999.99
+    ((n_elements(inputsize) eq 4) and (inputsize[2] eq 4)):  outvars = fltarr(inputsize[1])-9999.99
+    ((n_elements(inputsize) eq 4) and (inputsize[2] eq 5)):  outvars = dblarr(inputsize[1])-9999.99
+endcase
 
 
-;which dimension to take median on
-if n_vars gt 1 then medd = 2 else medd = 1 
 
-print,size(outvars)
 
 ;Add averaging length array
-al = fltarr(resamp)
+if keyword_set(al_check) then avel = fltarr(resamp)
 
 ;running window (fraction of doy)
 num_minutes = 24.*60.
@@ -531,18 +533,20 @@ res = 1./num_minutes
 
 ;Sample at 1 minute cadence 
 ;Added 2017/09/12 J. Prchlik
-for i = 0, resamp-1 do begin
+for i = 0L, resamp-1 do begin
     ;Get where minutes are in 1 minute range range
-    this_min = where((doy ge doy[i]-res/2.) and (doy lt doy[i]+res/2.))
+    this_min = where((doy ge doy[i]-res/2.) and (doy lt doy[i]+res/2.),cnt_use)
     ;make sure this_min(ute) contains data
     ;then store minimum in time range
     if n_elements(size(this_min)) gt 3 then begin
-        if n_vars eq 2 then outvars[*,i] = median(invars[*,this_min],dimension=2) $
-        else outvars[i] = median(invars[this_min])
-        al[i] = n_elements(this_min)
+        ;Switch from using median to using mean J. Prchlik 2017/10/02
+        if ((n_elements(inputsize) eq 5) and (cnt_use gt 1)) then $
+            outvars[*,i] = total(invars[*,this_min],2)/float(cnt_use) 
+        if ((n_elements(inputsize) eq 4) and (cnt_use gt 1)) then $
+            outvars[i] = mean(invars[this_min])
+        if keyword_set(al_check) then avel[i] = n_elements(this_min)
     endif
 endfor
-print,size(outvars)
 return,outvars
 end
 
@@ -566,10 +570,10 @@ pro regrid_1minute_phys, invars, outvars, theday, doy, outdoy=outdoy, fillval=fi
 ;Added 2017/09/01 J. Prchlik
 for i = 0, num_minutes-1 do begin
     ;Get where minutes are in 1 minute range range
-    this_min = where((doy ge doy_grid[i]) and (doy lt doy_grid[i]+1./num_minutes))
+    this_min = where((doy ge doy_grid[i]) and (doy lt doy_grid[i]+1./num_minutes),cnt_use)
     ;make sure this_min(ute) contains data
     ;then store minimum in time range
-    if n_elements(size(this_min)) gt 3 then outvars[i,*] = median(invars[this_min,*],dimension=1)
+    if cnt_use gt 1 then outvars[i,*] = median(invars[this_min,*],dimension=1)
 endfor
     
 ;
@@ -1007,7 +1011,7 @@ end
 
 
 pro dsc_advanced_kp_fit, year, doy, version, show=show, hold=hold, $
-                         save=save, rezero=rezero, $
+                         save=save, rezero=rezero, wind_show=wind_show,$
                          averaging_length = averaging_length, $
                          flybacks=flybacks, $
                          neg_offset=neg_offset, verbose=verbose, $
@@ -1021,12 +1025,41 @@ kb = 1.3806488d-23              ;  SI units
 ;compile necessary functions (Prchlik J. 2017/02/27)
 ;fist compile the startup program
 ;pref_set,'IDL_STARTUP','/crater/utilities/idl/mike/idlstartup',/commit
-pref_set,'IDL_PATH','+/crater/utilities/idl/mike/:+/usr/local/itt/user_contrib/astron:+/usr/local/itt/user_contrib/coyote:+/usr/local/itt/user_contrib/catalyst:<IDL_DEFAULT>',/commit
-load_plasma
+apath = '+/crater/utilities/idl/mike/'+$
+':+/usr/local/itt/user_contrib/astron'+$
+':+/usr/local/itt/user_contrib/coyote'+$
+':+/usr/local/itt/user_contrib/catalyst'+$
+':+/home/mstevens/IDLWorkspace/MLSspec/'+$
+':+/crater/utilities/idl/mpfit/'+$
+':+/home/mstevens/IDLWorkspace/Default/'+$
+':+/crater/observatories/wind/code/'+$
+':+/crater/observatories/wind/code/apbimax/'+$
+':+/crater/observatories/wind/code/common/'+$
+':+/crater/observatories/wind/code/bin/'+$
+':+/crater/observatories/wind/code/cal/'+$
+':<IDL_DEFAULT>'
+
+
+pref_set,'IDL_PATH',apath,/commit
+;pref_set,'IDL_PATH','+/crater/utilities/idl/mike/:+/usr/local/itt/user_contrib/astron:+/usr/local/itt/user_contrib/coyote:+/usr/local/itt/user_contrib/catalyst:<IDL_DEFAULT>',/commit
+resolve_routine,'load_plasma',/COMPILE_FULL
 
 ;Grab needed cdf routines
 setenv,'LD_LIBRARY_PATH=/usr/local/rsi/idl_6.3/bin/bin.linux.x86:/home/cdaweb/lib'
 resolve_routine,'idlmakecdf',/COMPILE_FULL
+
+;Compile all rourtines so sub_mlsspec_getspec_doy works 2017/09/22 J. Prchlik 
+;Routines for loading the wind spectra
+;Commented out J. Prchlik  2017/10/03 to switch to cdf wind spectrum
+;if keyword_set(wind_show) then sub_mlsspec_getspec_doy,2017,1,dummy
+if keyword_set(wind_show) then resolve_routine,'sub_mlsspec_getspec_doy',/COMPILE_FULL
+
+;Resolve all routines in called compiled functions J. Prchlik 2017/10/03
+;Fixes need for empty sub_mlsspec_getspec_doy routine
+resolve_all,/CONTINUE_ON_ERROR
+
+;resolve_routine,'read_calfile',/COMPILE_FULL
+
 
 ;check if clobber is set
 if keyword_set(clobber) then clober = 1 else clobber = 0
@@ -1188,11 +1221,11 @@ endelse
 ;       except we don't really see a lot of actual current spikes
 
 ;Commenented out by J. Prchlik (2017/09/12) in order to use real 1 minute averages
-if not keyword_set(averaging_length) then averaging_length = 15
-ia1 = smooth(ia, [0, averaging_length])
-ib1 = smooth(ib, [0, averaging_length])
-ic1 = smooth(ic, [0, averaging_length])
-itot1 = ia1+ib1+ic1
+;if not keyword_set(averaging_length) then averaging_length = 15
+;ia1 = smooth(ia, [0, averaging_length])
+;ib1 = smooth(ib, [0, averaging_length])
+;ic1 = smooth(ic, [0, averaging_length])
+;itot1 = ia1+ib1+ic1
 
 ; Use a running 1 minute median value instead of the actual value for each sensor
 thisdoy = spec_jd - julday(1, 1, year, 0, 0, 0) + 1.
@@ -1201,10 +1234,10 @@ thisdoy = spec_jd - julday(1, 1, year, 0, 0, 0) + 1.
 ;Start with fill value
 ;Stores the 1 minute running median
 ;for each sensor
-;ia1 = smooth_1minute_phys(ia, doy,thisdoy, al=averaging_length)
-;ib1 = smooth_1minute_phys(ib, doy,thisdoy)
-;ic1 = smooth_1minute_phys(ic, doy,thisdoy)
-;itot1 = ia1+ib1+ic1
+ia1 = smooth_1minute_phys(ia, doy,thisdoy, avel=averaging_length,/al_check)
+ib1 = smooth_1minute_phys(ib, doy,thisdoy)
+ic1 = smooth_1minute_phys(ic, doy,thisdoy)
+itot1 = ia1+ib1+ic1
 
 ; (4) GET EFFECTIVE AREAS AND FLOW ANGLES
 ; (4.1) full resolution
@@ -1234,16 +1267,17 @@ dtheta = sqrt((thetas - theta)^2)
 ; uncertainty on the 1min averages include that and <1 min variance
 ; the latter is an uncertainty on the mean, so divide by sqrt(n)
 ;Commented to use the new function smooth_1minute_phys J. Prchlik (2017/09/12)
-phi1_sq = smooth(phi^2, averaging_length)
-sigphi1 = sqrt(phi1_sq - smooth(phi, averaging_length)^2)/sqrt(averaging_length)
-theta1_sq = smooth(theta^2, averaging_length)
-sigtheta1 = sqrt(theta1_sq - smooth(theta, averaging_length)^2)/sqrt(averaging_length)
+;phi1_sq = smooth(phi^2, averaging_length)
+;sigphi1 = sqrt(phi1_sq - smooth(phi, averaging_length)^2)/sqrt(averaging_length)
+;theta1_sq = smooth(theta^2, averaging_length)
+;sigtheta1 = sqrt(theta1_sq - smooth(theta, averaging_length)^2)/sqrt(averaging_length)
 
 ;Use the new function smooth_1minute_phys J. Prchlik (2017/09/12)
-;phi1_sq = smooth_1minute_phys(phi^2, doy, thisday)
-;sigphi1 = sqrt(phi1_sq - smooth_1minute_phys(phi, doy, thisday)^2)/sqrt(averaging_length)
-;theta1_sq = smooth_1minute_phys(theta^2, doy, thisday)
-;sigtheta1 = sqrt(theta1_sq - smooth_1minute_phys(theta, doy, thisday)^2)/sqrt(averaging_length)
+;averaging length is an array of values used for the median 
+phi1_sq = smooth_1minute_phys(phi^2, doy, thisdoy)
+sigphi1 = sqrt(phi1_sq - smooth_1minute_phys(phi, doy, thisdoy)^2)/sqrt(averaging_length)
+theta1_sq = smooth_1minute_phys(theta^2, doy, thisdoy)
+sigtheta1 = sqrt(theta1_sq - smooth_1minute_phys(theta, doy, thisdoy)^2)/sqrt(averaging_length)
 
 
 dphi1 = sqrt(dphi^2 + sigphi1^2)
@@ -1273,11 +1307,11 @@ f1 = itot1/(eA1*v*dv)
 
 ; (7) CALCULATE THE CHANNEL VARIANCES
 ;Update to 1 minute average
-m_fsq =  smooth(f^2, [0,averaging_length])
-mf_sq = smooth(f, [0,averaging_length])^2
+;m_fsq =  smooth(f^2, [0,averaging_length])
+;mf_sq = smooth(f, [0,averaging_length])^2
 ;Updated to 1 minute average J. Prchlik (2017/09/12)
-;m_fsq =  smooth_1minute_phys(f^2, doy,thisday)
-;mf_sq =  smooth_1minute_phys(f, doy, thisday)^2
+m_fsq =  smooth_1minute_phys(f^2, doy,thisdoy)
+mf_sq =  smooth_1minute_phys(f, doy, thisdoy)^2
 
 sigf1 = sqrt(m_fsq - mf_sq)
 
@@ -1299,6 +1333,15 @@ sigf1 = sqrt(m_fsq - mf_sq)
 
 
 ; (8) Create variables for tracked uncertainties in the form df/f
+;Create array for populating with error values with the same shape as f1
+;J. Prchlik (2017/09/13)
+f1_shape = size(f1)
+df1_adc     = dblarr(f1_shape[1],f1_shape[2])
+df1_offsets = dblarr(f1_shape[1],f1_shape[2])
+df1_base    = dblarr(f1_shape[1],f1_shape[2])
+df1_binning = dblarr(f1_shape[1],f1_shape[2])
+
+
 df_base = 5./(eA*v*dv)
 df_adc = f*0.02
 df_binning = f*dv/v
@@ -1312,17 +1355,45 @@ df1_variance = sigf1
 ; treat offset, adc, and base uncertainties as un-correlated (may be a
 ; bad assumption for offset)
 ; The flybacks are generally quite correlated.
-df1_adc = f1*0.02 /sqrt(averaging_length)
-df1_offsets = smooth( sqrt(offset_array_a^2 + offset_array_b^2 + $
-                        offset_array_c^2), [0, averaging_length])/ $
-              (eA1*v*dv*sqrt(averaging_length))
-df1_base = 5./(eA1*v*dv*sqrt(averaging_length))
-df1_flyback = smooth(sqrt(ia_FBERROR^2 + ib_FBERROR^2 + $
-                          ic_FBERROR^2), [0, averaging_length])/$
+;df1_adc = f1*0.02 /sqrt(averaging_length)
+
+
+;Update to physically motivated 1 minute averages  J. Prchlik (2017/09/13)
+;df1_offsets = smooth( sqrt(offset_array_a^2 + offset_array_b^2 + $
+;                        offset_array_c^2), [0, averaging_length])/ $
+;                  (eA1[i,*]*v[i,*]*dv[i,*]*sqrt(averaging_length))
+;df1_binning = f1*(dv/v)/sqrt(averaging_length)
+;df1_flyback = smooth(sqrt(ia_FBERROR^2 + ib_FBERROR^2 + $
+;                          ic_FBERROR^2), [0, averaging_length])/$
+
+;Do smoothin before repopulating errors arrays to save time
+;J. Prchlik (2017/09/13)
+sq_sm_offset = smooth_1minute_phys(sqrt(offset_array_a^2 + offset_array_b^2 + $
+                            offset_array_c^2), doy, thisdoy)
+
+
+;Update to physically motivated 1 minute averages  J. Prchlik (2017/09/13)
+;Update so you preserve the final shape
+for i=0,f1_shape[1]-1 do begin
+    df1_adc[i,*] = f1[i,*]*0.02 /sqrt(averaging_length)
+    df1_offsets[i,*] = sq_sm_offset[i,*] /$
+                  (eA1[i,*]*v[i,*]*dv[i,*]*sqrt(averaging_length))
+    df1_base[i,*] = 5./(eA1[i,*]*v[i,*]*dv[i,*]*sqrt(averaging_length))
+    
+    df1_binning[i,*] = f1[i,*]*(dv[i,*]/v[i,*])/sqrt(averaging_length)
+
+endfor
+
+;Flyback does not use averaging length so no reconfiguration needed J. Prchlik (2017/09/12)
+df1_flyback = smooth_1minute_phys(sqrt(ia_FBERROR^2 + ib_FBERROR^2 + $
+                          ic_FBERROR^2), doy, thisdoy)/$
               (eA1*v*dv)
-df1_binning = f1*(dv/v)/sqrt(averaging_length)
+
+;df1_offsets and df1_flyback and the largest numbers
 df1 = sqrt(df1_variance^2 + df1_adc^2 + df1_offsets^2 + $
            df1_base^2 + df1_flyback^2+df1_binning^2)
+
+
 
 ; (9) Create arrays for derived data
 fitpars = fltarr(3, nspec)
@@ -1372,6 +1443,53 @@ dx = dv_kms
 ;                       and then use the results for guesses
 ;                       on the full resolution
 
+;Get Wind spectra if wind keyword set
+if keyword_set(wind_show) then begin 
+    ;Get Wind spectrum
+    ;Switch to CDF wind spectrum
+    sub_mlsspec_getspec_DOY,year,doy,wspec
+    ; Get the wind spectrum
+    wi1 = reform(wspec.currents[*, *, 0, *] + wspec.currents[*, *, 2, *])
+
+    sum_wi1 = total(wi1, 2)
+    wi1_rad = 0*total(wi1, 1)
+    for i = 0, n_elements(wi1_rad[0, *]) - 1 do begin &$
+        foo = min((wspec.cup1_angles[*,i])^2, maxang) &$
+		;pk  = max(sum_wi1[*, i], maxang) &$
+        wi1_rad[*, i] = wi1[maxang, *, i] &$
+    endfor
+    wi_v = wspec.cup1_vel ; Get the velocity values for array
+    wi_dv = wspec.cup1_vdel ; bin size of velocity C
+    wi_hr = wspec.sec_arr/(60.*60.); ## (1+fltarr(31)) ;Convert seconds into fractions of a day
+    ;get change in time for conversion
+    wi_dt = wi_hr[1:n_elements(wi_hr)-1]-wi_hr[0:n_elements(wi_hr)-2]
+    ;Put dt into every element
+    wi_dt = [wi_dt,wi_dt[n_elements(wi_dt)-1]] ## (1+fltarr(31))
+
+    ;Get julian day fraction for each observed wind spectrum
+    wi_jd = double(double(wi_hr/24.) + double(julday(1,1,year,0,0,0))+double(doy)-double(1.)) ; covert spectrum time into Julian Day
+    wi_dchan = alog10(wi_v/168.39)/alog10(1.0324)
+
+    ;Number of wind observations per day
+    wnspec = n_elements(wi_jd)
+
+
+    q0 = 1.6021892d-7 ; picocoulombs
+    ;average wind effective area is 35cm^2
+    ;https://wind.nasa.gov/docs/SWE_Ogilvie_SSR1995.pdf
+    waeff = 3.8E6 ;cm^3/km
+    ; Wind has 31 velocity channels
+    weA = q0*waeff*(1.+fltarr(wnspec)) ## (1.+fltarr(31)); picocoulomb*cm^3/km
+    wv = wi_v
+    ; Change in velocity channels
+    wdv = wi_dv
+
+    ;Covert spectrum into rdf format = [velocity,time]
+    p_wspec = wi1_rad*1.0E12/(weA*wv*wdv)
+    ; (picocoulomb * s-1)*km-2*s2 * km * cm-3 / picocoulomb
+    ;                              = cm-3 * s * km-1 =
+    ;                              particles per cm-3 per km/s
+endif
 
 ; This error handler skips the problematic spectrum and advances the
 ; loop index
@@ -1391,7 +1509,7 @@ while i lt nspec do begin
    ; pull out this round of dep variables to fit
     y = reform(f1[*, i])  
     dy = reform(df1[*, i])
-    ymax = max(y, x0); identify current peak channel
+    ymax = max(y, x0,/nan); identify current peak channel (Added /nan keyword J. Prchlik 2017/09/13)
     w = 1./(dy^2) ; weight data points by 1/uncertainty^2 (std gaussian weight)
 
     ; (11.2) calculate moments
@@ -1488,6 +1606,16 @@ while i lt nspec do begin
                                                               ':' + string(minute[i], format = '(I02)') + $
                                                               ':' + string(second[i], format = '(I02)') + $
                                                               ' UT ', charsize = 1.   
+
+
+        ;If wind show set plot nearest wind spectrum
+        if keyword_set(wind_show) then begin
+            wind_min = min(spec_jd[i]-wi_jd,wind_idx,/absolute)
+            ratio = max(y,/nan)/max(p_wspec[*,wind_idx],/nan)
+            oplot,wi_v[*,wind_idx],p_wspec[*,wind_idx],thick=2,color=100,linestyle=4,psym=10
+
+        endif
+      
         wait, 0.01  
      endif  
    endif; end of plotting conditional
@@ -1658,7 +1786,8 @@ invars = [[transpose(fitpars_1min)], $
           [dphi1], $
           [dtheta1]]
 thisdoy = spec_jd - julday(1, 1, year, 0, 0, 0) + 1.
-regrid_1minute, invars, outvars, doy, thisdoy, outdoy=outdoy
+;Updated to regridding at 1 minute intervals  J. Prchlik (2017/09/13)
+regrid_1minute_phys, invars, outvars, doy, thisdoy, outdoy=outdoy
 gridjd = outdoy + julday(1, 1, year, 0, 0, 0) -1
 fit_output_structure, transpose(outvars[*, 0:2]), transpose(outvars[*, 3:5]), outvars[*, 6], $
                       outvars[*, 7], outvars[*, 8], outvars[*, 9], year, gridjd, dfc_kp_1min, notes = notes
@@ -1672,10 +1801,6 @@ if keyword_set(save) then begin ; (Prchlik. J 2017/02/27 added cdf output and co
     idl_dscovr_to_cdf,fix(yyyy),fix(ddd),version ;create 1minute cdf files based on doy and year
     compare_wind_dscovr,fix(yyyy),fix(ddd),version ;create plot comparing 1minute dscovr data to wind observations
 ;setup idl structures
-
-
-
-
 endif
 
 if keyword_set(hold) then stop
@@ -2100,6 +2225,6 @@ end
 
 
 ;Allows you to compile the full file
-pro dsc_advanced_kp_fit_v2
+pro dsc_advanced_kp_fit_v2_1min
 
 end
