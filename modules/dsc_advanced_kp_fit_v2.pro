@@ -1062,7 +1062,7 @@ resolve_all,/CONTINUE_ON_ERROR
 
 
 ;check if clobber is set
-if keyword_set(clobber) then clober = 1 else clobber = 0
+if keyword_set(clobber) then clobber = 1 else clobber = 0
 
 ;Check to see if any file are created in current version (sav file created in idl_dscovr_to_cdf)
 savefmt = '("dscovr_file_status_v",I02,".idl")'
@@ -2225,6 +2225,6 @@ end
 
 
 ;Allows you to compile the full file
-pro dsc_advanced_kp_fit_v2_1min
+pro dsc_advanced_kp_fit_v2
 
 end
