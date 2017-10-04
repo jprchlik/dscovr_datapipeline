@@ -4,12 +4,14 @@
 ;calc_through_errors,clobber=clobber,reflag=reflag,start=start
 ;
 ;COMMENTS
+;curv is the only required argument which is the current working verision of the 
+;program as an integer
 ;clobber keyword refits the proton spectra for days already computed by kp_fit
 ;reflag keyword tells whether to reproduce the cdf files and their associated flags
 ;start is the start time in Julian days Assumes June 4, 2016 if no day given
 ;
 ;----------------------------------------------------------------
-pro calc_through_errors,clobber=clobber,reflag=reflag,start=start
+pro calc_through_errors,curv,clobber=clobber,reflag=reflag,start=start
 if keyword_set(clobber) then clobber = 1 else clobber = 0
 if keyword_set(reflag) then reflag = 1 else reflag = 0
 if keyword_set(start) then start = start else start = DOUBLE(JULDAY(06,04,2016)) ; Start of good DSCOVR observations
@@ -18,7 +20,6 @@ set_plot,'Z'
 ;resolve/compile dsc_advanced_kp_fit program
 resolve_routine,'dsc_advanced_kp_fit_v2',/compile_full_file
 
-curv = 5 ; Current working version
 efmt = '("***Skipping ",I4,"/",I03," due to missing DSCOVR data***")';format print day errors
 dfmt = '("Analyzing ",I4,"/",I03)';format print day
 mess = '#############################################################' ;mark error prints
