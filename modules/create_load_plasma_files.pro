@@ -76,7 +76,7 @@ if keyword_set(tfilefmt) then tfilefmt=tfilefmt else tfilefmt = '(I4,"/dscovr_or
 
 if keyword_set(outpath) then outpath = outpath else outpath = "/crater/observatories/dscovr/plasmag/merged/plsmag"
 outpath = outpath+"/"
-if keyword_set(outfmt) then outfmt = outfmt else outfmt = '("dsc.plsmag.",I4,"_",I03,".000.idl")'
+if keyword_set(outfmt) then outfmt = outfmt else outfmt = '("dsc.plsmag.",I4,"_",I03,".",I03,".idl")'
 
 
 
@@ -104,7 +104,7 @@ pls = read_mycdf("",plsf,/all)
 orb = read_mycdf("",orbf,/all)
 
 
-;Set up arrays for plasma
+;Set up arrays for plasma. 
 vx = pls.v_gse.dat[0,*]
 vy = pls.v_gse.dat[1,*]
 vz = pls.v_gse.dat[2,*]
@@ -114,11 +114,11 @@ dq = pls.dqf.dat
 
 
 ;find flagged values
-rvx = where((vx le -9999.0) or (dq gt 0))
-rvy = where((vy le -9999.0) or (dq gt 0))
-rvz = where((vz le -9999.0) or (dq gt 0))
-rwd = where((wd le -9999.0) or (dq gt 0))
-rnp = where((np le -9999.0) or (dq gt 0))
+rvx = where((vx le -9999.0) or (dq lt 0))
+rvy = where((vy le -9999.0) or (dq lt 0))
+rvz = where((vz le -9999.0) or (dq lt 0))
+rwd = where((wd le -9999.0) or (dq lt 0))
+rnp = where((np le -9999.0) or (dq lt 0))
 
 ;Replace -1.e30 with -9999.0
 if n_elements(size(rvx)) gt 3 then vx[rvx] = -9999.0
@@ -132,21 +132,10 @@ jdm = CDF_EPOCH_TOJULDAYS(mag.epoch1.dat)
 jdo = CDF_EPOCH_TOJULDAYS(orb.epoch.dat)
 
 ;Interpolate mag. data
-tbx = mag.b1gse.dat[0,*]
-tby = mag.b1gse.dat[1,*]
-tbz = mag.b1gse.dat[2,*]
-tbm = mag.b1f1.dat
-
-;Only interpolate non fill values
-rbx = where(tbx gt -9990.0)
-rby = where(tby gt -9990.0)
-rbz = where(tbz gt -9990.0)
-rbm = where(tbm gt -9990.0)
-
-bx = interpol(tbx[rbx], jdm[rbx] ,jdp)
-by = interpol(tby[rby], jdm[rby], jdp)
-bz = interpol(tbz[rbz], jdm[rbz], jdp)
-bm = interpol(tbm[rbm], jdm[rbm], jdp)
+bx = interpol(mag.b1gse.dat[0,*], jdm ,jdp)
+by = interpol(mag.b1gse.dat[1,*], jdm, jdp)
+bz = interpol(mag.b1gse.dat[2,*], jdm, jdp)
+bm = interpol(mag.b1f1.dat, jdm, jdp)
 
 ;Interpolate pos. data
 RE = 6371; Earth radius in km, for conversion of trajectories
@@ -176,7 +165,7 @@ Z_DSC     =  z
 HEOVH_DSC =  fltarr(n_elements(bx))-9999.0 ;He/H
 
 
-save,DOY_DSC,BX_DSC,BY_DSC,BZ_DSC,B_DSC,VX_DSC,VY_DSC,VZ_DSC,V_DSC,EW_DSC,NS_DSC,EW_DSC,NS_DSC,W_DSC,N_DSC,X_DSC,Y_DSC,Z_DSC,HEOVH_DSC,filename=outpath+string([year,doy],format=outfmt)
+save,DOY_DSC,BX_DSC,BY_DSC,BZ_DSC,B_DSC,VX_DSC,VY_DSC,VZ_DSC,V_DSC,EW_DSC,NS_DSC,EW_DSC,NS_DSC,W_DSC,N_DSC,X_DSC,Y_DSC,Z_DSC,HEOVH_DSC,filename=outpath+string([year,doy,doy+1],format=outfmt)
 
 
 
