@@ -11,7 +11,7 @@
 ;start is the start time in Julian days Assumes June 4, 2016 if no day given
 ;
 ;----------------------------------------------------------------
-pro calc_through_errors,curv,clobber=clobber,reflag=reflag,start=start
+pro calc_through_errors,curv,clobber=clobber,reflag=reflag,start=start,ender=ender
 if keyword_set(clobber) then clobber = 1 else clobber = 0
 if keyword_set(reflag) then reflag = 1 else reflag = 0
 if keyword_set(start) then start = start else start = DOUBLE(JULDAY(06,04,2016)) ; Start of good DSCOVR observations
@@ -25,7 +25,7 @@ dfmt = '("Analyzing ",I4,"/",I03)';format print day
 mess = '#############################################################' ;mark error prints
 ;start = DOUBLE(JULDAY(01,01,2017)) ; Start of good DSCOVR observations
 ;start = DOUBLE(JULDAY(05,04,2017)) ; Start of good DSCOVR observations
-ender = DOUBLE(systime(/JULIAN,/UTC)-14) ; loop until 14 days before today
+if keyword_set(ender) then ender = ender else ender = DOUBLE(systime(/JULIAN,/UTC)-14) ; loop until 14 days before today
 recom = DOUBLE(systime(/JULIAN,/UTC)-14-45) ; automatically recompute all spectra in the last 45 days
 
 
@@ -55,8 +55,6 @@ for i=start,ender-1 do begin
             compare_wind_dscovr,year,doy,curv
         end
 
-
-
     endcase
     catch,Error_status
 
@@ -73,6 +71,6 @@ for i=start,ender-1 do begin
     print,mess
 endfor
 
-set_plot,'X'
+set_plot,'Z'
 
 end
