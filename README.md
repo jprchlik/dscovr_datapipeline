@@ -10,7 +10,7 @@ Contains a subset of ancillary programs for analyzing DSCOVR data.
 Text error output for programs ran in modules.
 
 #out_plots
-Comparison plots between DSCOVR and WIND
+Comparison plots between DSCOVR and WIND per day. Also shows flagged data in DSCOVR.
 
 #rejected_times
 Contains rejected_times.txt, which shows times where DSCOVR fits failed due to instrumentation issues.
