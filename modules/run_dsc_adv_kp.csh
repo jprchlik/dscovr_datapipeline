@@ -46,7 +46,8 @@ setenv IDL_DLM_PATH "/home/jprchlik/personaladditions/code/idl/cdawlib/source:<I
 cd /crater/observatories/dscovr/code/modules
 unsetenv DISPLAY
 
-#version 6 is the current working verision 
+#version 7 is the current working verision 
 #idl
-idl -e "calc_through_errors,6"
+#Do not run calc_through_errors after 2017/08/15 for version 7
+idl -e "calc_through_errors,7,start=julday(8,15,2017,0,0,0)"
 
