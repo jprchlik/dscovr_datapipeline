@@ -1,7 +1,7 @@
 ;----------------------------------------------------------------
 ;
 ;USAGE
-;calc_through_errors,clobber=clobber,reflag=reflag,start=start
+;calc_through_errors,curv,clobber=clobber,reflag=reflag,start=start
 ;
 ;COMMENTS
 ;curv is the only required argument which is the current working verision of the 
