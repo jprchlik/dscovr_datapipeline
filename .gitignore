@@ -2,3 +2,22 @@
 *old
 *swp
 *\ 0 \*
+compare_plots/
+idl_cdf_patches/
+idlsave.dat
+logs/
+modules/#generate_dscovr_plsmag.pro#
+modules/\\"
+modules/crontab.txt
+modules/dsc_cal37_offsets_v6.asc~
+modules/idlsave.dat
+out_plots/
+rejected_times/README.md
+rejected_times/rejected_times.dat.backup
+scripts/
+skeleton/dscovr_h1_fc_0000000_v01.cdf
+skeleton/dscovr_h1_fc_0000000_v01_one_element_dqf.cdf
+skeleton/dscovr_h1_fc_0000000_v01_only_01_dqf.cdf
+skeleton/dscovr_h1_fc_0000000_v05.cdf
+skeleton/dscovr_h1_plasmag_00000000_v01.skt
+trending_turnon_baselines_sessiondata.idl
