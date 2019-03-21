@@ -1,7 +1,7 @@
 #/bin/tcsh
 #source "/home/jprchlik/.cshrc"
 #71 needed for CMS2 
-setenv IDL_VER "71"
+setenv IDL_VER "81"
 
 ############################################################################
 # re-assign idl specific content based on the desired version
@@ -41,13 +41,19 @@ if ( ! -d "/usr/local/etc/profile.d" ) then
 endif
 setenv IDL_PATH /usr/local/itt/idl/idl${IDL_VER}/lib 
 
-setenv IDL_DLM_PATH "/home/jprchlik/personaladditions/code/idl/cdawlib/source:<IDL_DEFAULT>"
+#setenv IDL_DLM_PATH "/home/jprchlik/personaladditions/code/idl/cdawlib/source:<IDL_DEFAULT>"
+setenv IDL_DLM_PATH "/crater/observatories/dscovr/code/idl_cdf_patches:<IDL_DEFAULT>"
 
 cd /crater/observatories/dscovr/code/modules
 unsetenv DISPLAY
 
 #version 7 is the current working verision 
 #idl
-#Do not run calc_through_errors after 2017/08/15 for version 7
-idl -e "calc_through_errors,7,start=julday(8,15,2017,0,0,0)"
+#Do not run calc_through_errors before 2018/01/01 for version 7
+#skipping bad march 11th
+#starting version 9 with data on 2018/06/10
+#starting version 10 with data on 2018/08/20
+#Starting version 11 with data on 2018/09/17
+#Starting version 12 with data on 2018/12/03
+idl -e "calc_through_errors,12,start=julday(12,3,2018,0,0,0)"
 
