@@ -35,8 +35,8 @@ sizer = n_elements(y)
 medar = fltarr(sizer)
 
 ;good values to pull median from
-find_val = where(y gt -9990.)
-good_val = y[find_val]
+find_val = where(y gt -9990.,good_vals)
+if good_vals gt 0 then good_val = y[find_val]
 
 for i=npix,sizer-npix-1 do begin
 ;get index in good_val to find median
@@ -244,9 +244,9 @@ case 1 of
 ;If last doy end search with first day of next year        
     (edoy gt ldoy+1): begin
         
-        load_plasma,year,sdoy,doy,/wind,doy=wdoy1,den=wden1,vx=wvx1
+        load_plasma,year,sdoy,edoy,/wind,doy=wdoy1,den=wden1,vx=wvx1
         load_plasma,year+1,1,2,/wind,doy=wdoy2,den=wden2,vx=wvx2
-        wdoy = [wdoy1,wdoy2+wdoy1]
+        wdoy = [wdoy1,wdoy2+ldoy]
         wden = [wden1,wden2]
         wvx = [wvx1,wvx2]
     end
@@ -293,55 +293,60 @@ endif
 
 
 ; reject time from flagging where wind is not observing or DSCOVR already flagged the data
-chk_den = where((den_val gt -9990.) and (pass_time eq 1))
-del_den = abs(den_val[chk_den]-wind_den[chk_den])/wind_den[chk_den]
-;sig_off = den_unc[chk_den]/den_val[chk_den]
+chk_den = where((den_val gt -9990.) and (pass_time eq 1),chk_cnt)
 
-;Calculate the moving average offset and measurement error
-del_off = ts_smooth(del_den,npix)
-sig_emp = ts_sigma(del_den,npix)/del_den ;emperical scatter
-wnd_emp = ts_sigma(wind_den,npix)/wind_den ;emperical scatter in WIND data
-sig_off = ts_smooth(den_unc[chk_den]/den_val[chk_den],npix)
+;Added check for when all densities are already reported as an error 2018/09/13 J. Prchlik
+if chk_cnt gt 0 then begin
+    del_den = abs(den_val[chk_den]-wind_den[chk_den])/wind_den[chk_den] 
+    ;sig_off = den_unc[chk_den]/den_val[chk_den]
+    
+    ;Calculate the moving average offset and measurement error
+    del_off = ts_smooth(del_den,npix)
+    sig_emp = ts_sigma(del_den,npix)/del_den ;emperical scatter
+    wnd_emp = ts_sigma(wind_den,npix)/wind_den ;emperical scatter in WIND data
+    sig_off = ts_smooth(den_unc[chk_den]/den_val[chk_den],npix)
+    
+    ;print,sig_emp
+    ;print,wnd_emp
+    ;print,sig_off
+    ;
+    
+    ;The difference quoted as a n-sigma uncertainty
+    ;sig_den = abs(del_den[chk_den])/den_unc[chk_den]
+    
+    ;Use the Chauvenet's Criterion where sigma and <mu> come from the mission long comparision with WIND
+    ;;;med_off = 6.3/100.
+    med_off = 26.8/100. ;median uncertainty
+    med_off = wnd_emp;uncertainty in wind value
+    ;;;bad_tst = n_elements(del_den)*erfc(abs(del_den-med_off)/sig_off)
+    ;;;bad_den = where(bad_tst lt 0.500000) ; Assume a gaussian distribution
+    
+    ;combined measurement error and emperical uncertainty
+    sig_off = sqrt(sig_emp^2+temporary(sig_off)^2+med_off^2)/sqrt(3.)
+    
+    ;Do a 3 sigma rejection areas where average offset and uncertainty does not cross 0
+    bad_den = where(abs(del_off)-sigcut*abs(sig_off) gt 0)
+    
+    
+    
+    
+    ;where the measured uncertainty is 5 time greater than the DSCOVR WIND difference
+    ;bad_den = where(sig_den gt sigcut)
+    
+    ;create array groups for areas where the density is 5 times greater than the unc.
+    ;for an extended period (npix)
+    if n_elements(size(bad_den)) gt 3 then windcut = grp_obs(bad_den,npix) else windcut = -9999.0
+    if n_elements(size(windcut)) gt 3 then windcut = chk_den[temporary(windcut)] else windcut = -9999.0
+    
+    ;compute the array values to return to the main program
+    ;;if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
+    ;;
+    ;;;print information to make sure its working properly (hint it is not)
+    ;if n_elements(size(windcut)) gt 3 then print,sig_den[windcut],npix,sigcut
+    
+    ;check to see the median value inside the block of values
 
-;print,sig_emp
-;print,wnd_emp
-;print,sig_off
-;
-
-;The difference quoted as a n-sigma uncertainty
-;sig_den = abs(del_den[chk_den])/den_unc[chk_den]
-
-;Use the Chauvenet's Criterion where sigma and <mu> come from the mission long comparision with WIND
-;;;med_off = 6.3/100.
-med_off = 26.8/100. ;median uncertainty
-med_off = wnd_emp;uncertainty in wind value
-;;;bad_tst = n_elements(del_den)*erfc(abs(del_den-med_off)/sig_off)
-;;;bad_den = where(bad_tst lt 0.500000) ; Assume a gaussian distribution
-
-;combined measurement error and emperical uncertainty
-sig_off = sqrt(sig_emp^2+temporary(sig_off)^2+med_off^2)/sqrt(3.)
-
-;Do a 3 sigma rejection areas where average offset and uncertainty does not cross 0
-bad_den = where(abs(del_off)-sigcut*abs(sig_off) gt 0)
-
-
-
-
-;where the measured uncertainty is 5 time greater than the DSCOVR WIND difference
-;bad_den = where(sig_den gt sigcut)
-
-;create array groups for areas where the density is 5 times greater than the unc.
-;for an extended period (npix)
-if n_elements(size(bad_den)) gt 3 then windcut = grp_obs(bad_den,npix) else windcut = -9999.0
-if n_elements(size(windcut)) gt 3 then windcut = chk_den[temporary(windcut)] else windcut = -9999.0
-
-;compute the array values to return to the main program
-;;if n_elements(size(ind_grp)) gt 3 then windcut = bad_den[ind_grp] else windcut = -9999.0
-;;
-;;;print information to make sure its working properly (hint it is not)
-;if n_elements(size(windcut)) gt 3 then print,sig_den[windcut],npix,sigcut
-
-;check to see the median value inside the block of values
+endif else windcut = -9999.0
 
 return,windcut
 end
