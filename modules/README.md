@@ -142,3 +142,31 @@ skeleton : skeleton is the full path to the cdf skeleton (default ='../skeleton/
 filefmt  : filefmt is the file format of the files in the idl save directory (default ='("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl")')      
 outfmt   : outfmt is the file format of the output cdf files (default   = '("dscovr_h1_fc_",I4,I02,I02,"_v",I02,".cdf")')      
 
+create_load_plasma_files
+========================
+
+Creates idl save files for the load\_plasma program with for the lastest DSCOVR parameters stored in the distributed cdf files.
+
+```IDL
+.r create_load_plasma_files
+create_load_plasma_files,2018,1
+```
+
+
+Below is the full call for the program:
+create_load_plasma_files,year,doy,marchive=marchive,parchive=parchive,tarchive=tarchive,mfilefmt=mfilefmt,pfilefmt=pfilefmt,tfilefmt=tfilefmt,outpath=outpath,outfmt=outfmt
+
+Below is the full set of inputs for the program:    
+parchive  :  (Default ='/crater/observatories/dscovr/plasmag/l2/cdf/public_kp/1minute_corrected';set output cdf location)
+marchive  :  (Default ='/crater/observatories/dscovr/plasmag/mag';set output cdf location)
+tarchive  :  (Default ='/crater/observatories/dscovr/traj/pre_or';set output cdf location)
+pfilefmt  :  (Default  = '("dscovr_h1_fc\_",I4,I02,I02,"\_v\*.cdf")')
+mfilefmt  :  (Default  = '(I4,"/dscovr_h0_mag\_",I4,I02,I02,"\_v\*.cdf")')
+tfilefmt  :  (Default  = '(I4,"/dscovr_orbit_pre\_",I4,I02,I02,"\_v\*.cdf")')
+outpath   :  (Default = "/crater/observatories/dscovr/plasmag/merged/plsmag")
+outfmt    :  (Default = '("dsc.plsmag.",I4,"\_",I03,".",I03,".idl")')
+
+setidl71.csh
+============
+A C-shell script that loads IDL with the required contingencies to run any of the programs used in this directory. Note that the name is misleading, and the program actually calls IDL 8.1.
+
