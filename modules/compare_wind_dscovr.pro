@@ -170,16 +170,22 @@ end
 ;    and DSCOVR-WIND (_delta_) in ../out_plots/
 ;    year and day of year (doy) are integers 
 ;    span in days to compare WIND and DSCOVR (default = 1)
-;    filefmt is the format of the idl save file you need to restore (default = '("dsc_fc_advkp_1minute_corrected_",I4,"_",I03,".idl"))
-;    archive is the location of the idl save files archive (default = '/crater/observatories/dscovr/plasmag/l2/idl/public_kp/1minute_corrected)
+;    filefmt is the format of the idl save file you need to restore (default = '("dscovr_h1_fc_",I4,I02,I02,"_v",I02)')
+;    archive is the location of the cdf files archive (default = '/crater/observatories/dscovr/plasmag/l2/cdf/public_kp/1minute_corrected)
+;    ffmt is the file format of the output png file with plasma dscovr plotted ontop of wind
+;    dfmt is the file format of the output png file with dscovr wind plasma difference plotted 
+;    mfmt is the file format of the output png file with magnetic field dscovr plotted ontop of wind
 ;
 ;--------------------------------------------------
-pro compare_wind_dscovr,year,doy,version,span=span,filefmt=filefmt,archive=archive
+pro compare_wind_dscovr,year,doy,version,span=span,filefmt=filefmt,archive=archive,ffmt=ffmt,mfmt=mfmt,dfmt=dfmt
 
 if keyword_set(archive) then archive=archive else archive='/crater/observatories/dscovr/plasmag/l2/cdf/public_kp/1minute_corrected';get the default location of DSCOVR archive
 archive= archive+'/'
 if keyword_set(filefmt) then filefmt=filefmt else filefmt= '("dscovr_h1_fc_",I4,I02,I02,"_v",I02)';default file format is for 1 minute cadence data
 if keyword_set(span) then span=fix(span) else span = 1
+if keyword_set(ffmt) then ffmt = ffmt else ffmt = '("../out_plots/compare_wind_dsc_ontop_",I4,"_",I03,".png")'
+if keyword_set(dfmt) then dfmt = dfmt else dfmt = '("../out_plots/compare_wind_dsc_delta_",I4,"_",I03,".png")'
+if keyword_set(mfmt) then mfmt = mfmt else mfmt = '("../out_plots/compare_wind_dsc_ontop_mag_",I4,"_",I03,".png")'
 
 plotsym,0,/fill
 
@@ -403,7 +409,6 @@ oplot,jddoy,dz,psym=8,color=dcol
 ;oplot,adoy,az,psym=5,color=acol
 
 
-ffmt = '("../out_plots/compare_wind_dsc_ontop_",I4,"_",I03,".png")'
 fname = string([year,doy],format=ffmt)
 TVLCT,r,g,b,/Get
 write_png,fname,tvrd(/true),r,g,b
@@ -474,7 +479,6 @@ if (test_mag eq 1) then begin
     ;    oplot,ex,ey,color=ecol,linestyle=0,thick=.2
     ;endfor
 
-    mfmt = '("../out_plots/compare_wind_dsc_ontop_mag_",I4,"_",I03,".png")'
     fname = string([year,doy],format=mfmt)
     TVLCT,r,g,b,/Get
     write_png,fname,tvrd(/true),r,g,b
@@ -554,88 +558,97 @@ if ace eq 1 then adoy = double(julday(1,1,year)+(adoy-1))
 
 
 ;Plot proton density
-use = where(dd gt -9998.)
-plot,ddoy[use],dwdd[use],psym=6,color=0,ytitle='Density [cm^-3]',$
-     title='(DSCOVR-WIND) '+strcompress(year,/remove_all)+'; Time offset = '+strcompress(dtime*24.*3600.)+'s',$
-    /nodata,background=255,charsize=2,font=1,charthick=3,position=plot1,xtickformat="(A1)"
-for i=0,n_elements(ddoy)-1 do begin
-    error_bars,ddoy[i],dwdd[i],ddd[i],ex,ey
-    if ddd[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
-endfor
-oplot,ddoy,dwdd,psym=8,color=dcol
-if ace eq 1 then oplot,adoy,dwad,psym=5,color=acol
+use = where(dd gt -9998.,c_den)
+if c_den gt 0 then begin
+    plot,ddoy[use],dwdd[use],psym=6,color=0,ytitle='Density [cm^-3]',$
+         title='(DSCOVR-WIND) '+strcompress(year,/remove_all)+'; Time offset = '+strcompress(dtime*24.*3600.)+'s',$
+        /nodata,background=255,charsize=2,font=1,charthick=3,position=plot1,xtickformat="(A1)"
+    for i=0,n_elements(ddoy)-1 do begin
+        error_bars,ddoy[i],dwdd[i],ddd[i],ex,ey
+        if ddd[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    endfor
+    oplot,ddoy,dwdd,psym=8,color=dcol
+    if ace eq 1 then oplot,adoy,dwad,psym=5,color=acol
+   ;plot outliers in red
+   out = where(abs(dwdd) gt sigout*ddd)
+   if n_elements(out) gt 2 then oplot,ddoy[out],dwdd[out],psym=8,color=200
 
-;plot outliers in red
-out = where(abs(dwdd) gt sigout*ddd)
-if n_elements(out) gt 2 then oplot,ddoy[out],dwdd[out],psym=8,color=200
+endif
 
 
 
 ;Plot proton thermal speed
-use = where(dew gt -9998.)
-plot,ddoy[use],dwdw[use],psym=6,color=0,ytitle='Th. Speed [km/s]',/NOERASE, $
-    /nodata,background=255,charsize=2,font=1,charthick=3,position=plot2,xtickformat="(A1)"
-for i=0,n_elements(ddoy)-1 do begin
-    error_bars,ddoy[i],dwdw[i],ddew[i],ex,ey
-    if dew[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
-endfor
-oplot,ddoy,dwdw,psym=8,color=dcol
-if ace eq 1 then oplot,adoy,dwaw,psym=5,color=acol
-
-;plot outliers in red
-out = where(abs(dwdd) gt sigout*ddew)
-if n_elements(out) gt 2 then oplot,ddoy[out],dwdw[out],psym=8,color=200
+use = where(dew gt -9998.,n_dew)
+if n_dew gt 0 then begin
+    plot,ddoy[use],dwdw[use],psym=6,color=0,ytitle='Th. Speed [km/s]',/NOERASE, $
+        /nodata,background=255,charsize=2,font=1,charthick=3,position=plot2,xtickformat="(A1)"
+    for i=0,n_elements(ddoy)-1 do begin
+        error_bars,ddoy[i],dwdw[i],ddew[i],ex,ey
+        if dew[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    endfor
+    oplot,ddoy,dwdw,psym=8,color=dcol
+    if ace eq 1 then oplot,adoy,dwaw,psym=5,color=acol
+    
+    ;plot outliers in red
+    out = where(abs(dwdd) gt sigout*ddew)
+    if n_elements(out) gt 2 then oplot,ddoy[out],dwdw[out],psym=8,color=200
+endif
 
 
 
 ;Plot Vx
-use = where(dx gt -9998.)
-plot,ddoy[use],dwdx[use],psym=6,color=0,ytitle='Vx [km/s]',/nodata,background=255,charsize=2,$
-     font=1,charthick=3,position=plot3,/NOERASE,xtickformat="(A1)"
-for i=0,n_elements(ddoy)-1 do begin
-    error_bars,ddoy[i],dwdx[i],ddx[i],ex,ey
-    if ddx[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
-endfor
-oplot,ddoy,dwdx,psym=8,color=dcol
-if uicnt gt 0 then oplot,ddoy[ui],dwdx[ui],psym=8,color=100,s=2.0
-if ace eq 1 then oplot,adoy,dwax,psym=5,color=acol
-
-;plot outliers in red
-out = where(abs(dwdx) gt 5.*ddx)
-if n_elements(out) gt 2 then oplot,ddoy[out],dwdx[out],psym=8,color=200
+use = where(dx gt -9998.,n_dx)
+if n_dx gt 0 then begin
+    plot,ddoy[use],dwdx[use],psym=6,color=0,ytitle='Vx [km/s]',/nodata,background=255,charsize=2,$
+         font=1,charthick=3,position=plot3,/NOERASE,xtickformat="(A1)"
+    for i=0,n_elements(ddoy)-1 do begin
+        error_bars,ddoy[i],dwdx[i],ddx[i],ex,ey
+        if ddx[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    endfor
+    oplot,ddoy,dwdx,psym=8,color=dcol
+    if uicnt gt 0 then oplot,ddoy[ui],dwdx[ui],psym=8,color=100,s=2.0
+    if ace eq 1 then oplot,adoy,dwax,psym=5,color=acol
+    
+    ;plot outliers in red
+    out = where(abs(dwdx) gt 5.*ddx)
+    if n_elements(out) gt 2 then oplot,ddoy[out],dwdx[out],psym=8,color=200
+endif
 
 ;Plot Vy
-use = where(dy gt -9998.)
-plot,ddoy[use],dwdy[use],psym=6,color=0,ytitle='Vy [km/s]',/nodata,background=255,charsize=2,$
-     font=1,charthick=3,position=plot4,/NOERASE,xtickformat="(A1)"
-for i=0,n_elements(ddoy)-1 do begin
-    error_bars,ddoy[i],dwdy[i],ddy[i],ex,ey
-    if ddy[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
-endfor
-oplot,ddoy,dwdy,psym=8,color=dcol
-if ace eq 1 then oplot,adoy,dway,psym=5,color=acol
-
-;plot outliers in red
-out = where(abs(dwdy) gt 5.*ddy)
-if n_elements(out) gt 2 then oplot,ddoy[out],dwdy[out],psym=8,color=200
+use = where(dy gt -9998.,n_dy)
+if n_dy gt 0 then begin
+    plot,ddoy[use],dwdy[use],psym=6,color=0,ytitle='Vy [km/s]',/nodata,background=255,charsize=2,$
+         font=1,charthick=3,position=plot4,/NOERASE,xtickformat="(A1)"
+    for i=0,n_elements(ddoy)-1 do begin
+        error_bars,ddoy[i],dwdy[i],ddy[i],ex,ey
+        if ddy[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    endfor
+    oplot,ddoy,dwdy,psym=8,color=dcol
+    if ace eq 1 then oplot,adoy,dway,psym=5,color=acol
+    
+    ;plot outliers in red
+    out = where(abs(dwdy) gt 5.*ddy)
+    if n_elements(out) gt 2 then oplot,ddoy[out],dwdy[out],psym=8,color=200
+endif
 
 ;Plot Vz
-use = where(dz gt -9998.)
-plot,ddoy[use],dwdz[use],psym=6,color=0,ytitle='Vz [km/s]',xtitle=string([doy,year],format=xlabfmt),/nodata,background=255,charsize=2,$
-     font=1,charthick=3,position=plot5,/NOERASE,xtickformat='label_date'
-for i=0,n_elements(ddoy)-1 do begin
-    error_bars,ddoy[i],dwdz[i],ddz[i],ex,ey
-    if ddz[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
-endfor
-oplot,ddoy,dwdz,psym=8,color=dcol
-if ace eq 1 then oplot,adoy,dwaz,psym=5,color=acol
+use = where(dz gt -9998.,n_dz)
+if n_dz gt 0 then begin
+    plot,ddoy[use],dwdz[use],psym=6,color=0,ytitle='Vz [km/s]',xtitle=string([doy,year],format=xlabfmt),/nodata,background=255,charsize=2,$
+         font=1,charthick=3,position=plot5,/NOERASE,xtickformat='label_date'
+    for i=0,n_elements(ddoy)-1 do begin
+        error_bars,ddoy[i],dwdz[i],ddz[i],ex,ey
+        if ddz[i] gt -9998.0 then oplot,ex,ey,color=ecol,linestyle=0,thick=.2
+    endfor
+    oplot,ddoy,dwdz,psym=8,color=dcol
+    if ace eq 1 then oplot,adoy,dwaz,psym=5,color=acol
+    
+    ;plot outliers in red
+    out = where(abs(dwdz) gt 5.*ddz)
+    if n_elements(out) gt 2 then oplot,ddoy[out],dwdz[out],psym=8,color=200
+endif
 
-;plot outliers in red
-out = where(abs(dwdz) gt 5.*ddz)
-if n_elements(out) gt 2 then oplot,ddoy[out],dwdz[out],psym=8,color=200
-
-ffmt = '("../out_plots/compare_wind_dsc_delta_",I4,"_",I03,".png")'
-fname = string([year,doy],format=ffmt)
+fname = string([year,doy],format=dfmt)
 
 TVLCT,r,g,b,/Get
 write_png,fname,tvrd(/true),r,g,b
