@@ -1,7 +1,7 @@
 #/bin/tcsh
 #source "/home/jprchlik/.cshrc"
 #71 needed for CMS2 
-setenv IDL_VER "71"
+setenv IDL_VER "81"
 
 ############################################################################
 # re-assign idl specific content based on the desired version
@@ -41,7 +41,7 @@ if ( ! -d "/usr/local/etc/profile.d" ) then
 endif
 setenv IDL_PATH /usr/local/itt/idl/idl${IDL_VER}/lib 
 
-setenv IDL_DLM_PATH "/home/jprchlik/personaladditions/code/idl/cdawlib/source:<IDL_DEFAULT>"
+setenv IDL_DLM_PATH "/crater/observatories/dscovr/code/idl_cdf_patches:<IDL_DEFAULT>"
 
 idl
 
